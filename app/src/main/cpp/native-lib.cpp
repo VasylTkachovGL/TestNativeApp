@@ -1,6 +1,7 @@
 #include <jni.h>
 #include <string>
 
+// Test function
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_example_testnativeapp_Core_getExternalStoragePath(
         JNIEnv *env,
@@ -20,10 +21,8 @@ Java_com_example_testnativeapp_Core_getExternalStoragePath(
 
     return env->NewStringUTF(extStoragePathString);
 }
-
 extern "C"
-JNIEXPORT void JNICALL
-Java_com_example_testnativeapp_Core_readDataFromUsb(JNIEnv *env, jobject thiz, jbyteArray bytes,
-                                                    jint length) {
-    // TODO: implement readDataFromUsb()
+JNIEXPORT jbyteArray JNICALL
+Java_com_example_testnativeapp_Core_modifyRecordedDataFromAndroid(JNIEnv *env, jobject /* this */, jbyteArray bytes) {
+    return bytes;
 }

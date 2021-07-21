@@ -8,7 +8,7 @@ class Core {
 
     external fun getExternalStoragePath(): String
 
-    external fun readDataFromUsb(bytes: ByteArray, length: Int)
+    external fun modifyRecordedDataFromAndroid(bytes: ByteArray) : ByteArray
 
     companion object {
         // Used to load the 'native-lib' library on application startup.

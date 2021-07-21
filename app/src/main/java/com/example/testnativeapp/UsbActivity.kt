@@ -7,19 +7,23 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.*
+import android.media.MediaRecorder
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import com.example.testnativeapp.audiorecorder.AudioRecorder
 import kotlinx.android.synthetic.main.activity_usb.*
 import kotlinx.coroutines.*
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import kotlin.time.ExperimentalTime
 
 
 /*
  * @author Tkachov Vasyl
  * @since 20.07.2021
  */
+@ExperimentalTime
 class UsbActivity : Activity() {
 
     private val usbManager: UsbManager by lazy {
@@ -31,35 +35,49 @@ class UsbActivity : Activity() {
     private var usbDataInterface: UsbInterface? = null
     private var readEndPoint: UsbEndpoint? = null
     private var writeEndPoint: UsbEndpoint? = null
-    private val scope = CoroutineScope(Dispatchers.IO + Job())
+    private val writeDataScope = CoroutineScope(Dispatchers.IO + Job())
+    private val audioWaveScope = CoroutineScope(Dispatchers.Main)
 
     private val factory: ReadTaskFactory by lazy {
         ReadTaskFactory()
     }
     private var readListener: ReadListener? = null
+    private var audioRecorder: AudioRecorder? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_usb)
         discoverConnectedDevice(intent)
 
-        start_read_button.setOnClickListener {
-            start_read_button.isEnabled = false
-            stop_read_button.isEnabled = true
-            factory.start()
+        startReadButton.setOnClickListener {
+            if (!factory.isRunning) {
+                recordAudio()
+                factory.start()
+                startReadButton.text = "Stop recording"
+            } else {
+                stopRecordingAudio()
+                factory.stop()
+                startReadButton.text = "Start recording"
+            }
         }
-        stop_read_button.setOnClickListener {
-            start_read_button.isEnabled = true
-            stop_read_button.isEnabled = false
-            factory.stop()
-        }
+
+        audioRecorder = AudioRecorder(object: AudioRecorder.Listener {
+            override fun onDataReceived(bytes: ByteArray?) {
+                // Here we got data from audio recorder
+                if (bytes != null) {
+                    val modifiedData = App.core?.modifyRecordedDataFromAndroid(bytes)
+
+                    // Send modified recorded data to USB device
+                    modifiedData?.let { writeDataAsync(it) }
+                }
+            }
+        })
+
         readListener = object : ReadListener {
             override fun onNewData(data: Int?) {
-                // Here we got new read data
+                // Here we got data received from iRig
                 val info = StringBuilder()
-                info.append("Read: ")
-                info.append(data)
-                info.append("\n")
+                info.append("Read data result: $data \n")
                 Log.d("iRig", info.toString())
             }
         }
@@ -72,8 +90,21 @@ class UsbActivity : Activity() {
 
     override fun onStop() {
         super.onStop()
+        if (!factory.isRunning) {
+            factory.stop()
+        }
         usbDeviceConnection?.releaseInterface(usbDataInterface)
         usbDeviceConnection?.close()
+    }
+
+    private fun recordAudio() {
+        audioRecorder?.start()
+        audioWaveScope.launch { updateAudioWave() }
+    }
+
+    private fun stopRecordingAudio() {
+        audioRecorder?.stop()
+        audioRecordView.recreate()
     }
 
     private fun discoverConnectedDevice(intent: Intent?) {
@@ -98,6 +129,7 @@ class UsbActivity : Activity() {
 
     private fun openUsbDevice(usbDevice: UsbDevice) {
         usbDeviceConnection = usbManager.openDevice(usbDevice)
+        usbDeviceConnection?.controlTransfer(0x21, 0x22, 0x1, 0, null, 0, 0)
 
         usbDeviceConnection?.let { connection ->
             val interfaceCount = usbDevice.interfaceCount
@@ -117,10 +149,8 @@ class UsbActivity : Activity() {
             usbDataInterface?.let {
                 Log.d("iRig", "Claim interface: ${it.id}")
                 if (connection.claimInterface(it, true)) {
-                    return
+                    openUsbInterface(it)
                 }
-                openUsbInterface(it)
-                writeDataAsync(byteArrayOf(0))
             }
         }
     }
@@ -142,8 +172,8 @@ class UsbActivity : Activity() {
     /**
      * Use this method to send data to USB device
      */
-    fun writeDataAsync(buffer: ByteArray) {
-        scope.launch {
+    private fun writeDataAsync(buffer: ByteArray) {
+        writeDataScope.launch {
             writeData(buffer)
         }
     }
@@ -151,7 +181,7 @@ class UsbActivity : Activity() {
     private suspend fun writeData(bytes: ByteArray): Int = suspendCoroutine { continuation ->
         usbDeviceConnection?.apply {
             val transferResult = bulkTransfer(writeEndPoint, bytes, bytes.size, TIMEOUT)
-            Log.d("iRig", "writeData result: $transferResult")
+            Log.d("iRig", "Write data result: $transferResult")
             continuation.resume(transferResult)
         }
     }
@@ -186,10 +216,11 @@ class UsbActivity : Activity() {
         fun onNewData(data: Int?)
     }
 
-    inner class ReadTaskFactory(protected val readByteSize: Int = 4096,
-        val listener: ReadListener? = readListener) {
+    inner class ReadTaskFactory(private val readByteSize: Int = 4096,
+        private val listener: ReadListener? = readListener) {
 
-        private var isRunning: Boolean = false
+        var isRunning: Boolean = false
+            private set
         private lateinit var job: Job
         private val syncObject = Object()
 
@@ -200,9 +231,7 @@ class UsbActivity : Activity() {
                 while (isRunning) {
                     synchronized(syncObject) {
                         val buffer = ByteArray(readByteSize)
-                        val bulkTransfer =
-                            usbDeviceConnection?.bulkTransfer(readEndPoint, buffer, readByteSize,
-                                200)
+                        val bulkTransfer = usbDeviceConnection?.bulkTransfer(readEndPoint, buffer, readByteSize,1000)
                         listener?.onNewData(bulkTransfer)
                     }
                 }
@@ -218,7 +247,13 @@ class UsbActivity : Activity() {
         }
     }
 
-    fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
+    private suspend fun updateAudioWave() {
+        while (factory.isRunning) {
+            delay(100)
+            val currentMaxAmplitude = audioRecorder?.amplitude ?: 0
+            audioRecordView.update(currentMaxAmplitude)
+        }
+    }
 
     companion object {
         private const val ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION"
