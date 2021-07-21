@@ -6,15 +6,9 @@ package com.example.testnativeapp
 */
 class Core {
 
-    /**
-     * A native method that is implemented by the 'native-lib' native library,
-     * which is packaged with this application.
-     */
-    external fun stringFromJNI(): String
+    external fun getExternalStoragePath(): String
 
     external fun readDataFromUsb(bytes: ByteArray, length: Int)
-
-    external  fun onUsbConnectionChanged(isConnected: Boolean)
 
     companion object {
         // Used to load the 'native-lib' library on application startup.

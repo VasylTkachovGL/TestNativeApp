@@ -2,7 +2,7 @@
 #include <string>
 
 extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_testnativeapp_Core_stringFromJNI(
+Java_com_example_testnativeapp_Core_getExternalStoragePath(
         JNIEnv *env,
         jobject /* this */) {
 
@@ -26,11 +26,4 @@ JNIEXPORT void JNICALL
 Java_com_example_testnativeapp_Core_readDataFromUsb(JNIEnv *env, jobject thiz, jbyteArray bytes,
                                                     jint length) {
     // TODO: implement readDataFromUsb()
-}
-
-extern "C"
-JNIEXPORT void JNICALL
-Java_com_example_testnativeapp_Core_onUsbConnectionChanged(JNIEnv *env, jobject thiz,
-                                                           jboolean is_connected) {
-    // TODO: implement onUsbConnectionChanged()
 }
