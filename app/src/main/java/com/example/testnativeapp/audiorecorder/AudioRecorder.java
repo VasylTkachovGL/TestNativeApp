@@ -3,6 +3,7 @@ package com.example.testnativeapp.audiorecorder;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
@@ -34,15 +35,16 @@ public class AudioRecorder {
      */
     private Thread mThread;
 
-    private Listener listener;
+    private final Listener listener;
     public int amplitude = 0;
+    public int bufferSize = -1;
 
     /**
      * A simple audio recorder.
      */
-    public AudioRecorder(Listener listener) {
+    public AudioRecorder(ParcelFileDescriptor fileDescriptor, Listener listener) {
         this.listener = listener;
-        mOutputStream = new ByteArrayOutputStream();
+        mOutputStream = new ParcelFileDescriptor.AutoCloseOutputStream(fileDescriptor);
     }
 
     /**
@@ -69,8 +71,9 @@ public class AudioRecorder {
                         setThreadPriority(THREAD_PRIORITY_AUDIO);
 
                         Buffer buffer = new Buffer();
+                        bufferSize = buffer.size;
                         AudioRecord record = new AudioRecord(
-                                MediaRecorder.AudioSource.MIC,
+                                MediaRecorder.AudioSource.DEFAULT,
                                 buffer.sampleRate,
                                 AudioFormat.CHANNEL_IN_MONO,
                                 AudioFormat.ENCODING_PCM_16BIT,

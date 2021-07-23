@@ -8,11 +8,14 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.*
 import android.os.Bundle
+import android.os.ParcelFileDescriptor
 import android.util.Log
 import android.widget.Toast
 import com.example.testnativeapp.audiorecorder.AudioRecorder
 import kotlinx.android.synthetic.main.activity_usb.*
 import kotlinx.coroutines.*
+import java.io.File
+import java.io.PrintWriter
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 import kotlin.time.ExperimentalTime
@@ -42,6 +45,13 @@ class UsbActivity : Activity() {
     }
     private var readListener: ReadListener? = null
     private var audioRecorder: AudioRecorder? = null
+    private val tmpFile: File by lazy {
+        val f = File("$externalCacheDir${File.separator}iRig_tmp.pcm")
+        if (!f.exists()) {
+            f.createNewFile()
+        }
+        f
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,7 +70,8 @@ class UsbActivity : Activity() {
             }
         }
 
-        audioRecorder = AudioRecorder(object: AudioRecorder.Listener {
+        val fileDescriptor = ParcelFileDescriptor.open(tmpFile, ParcelFileDescriptor.MODE_READ_WRITE)
+        audioRecorder = AudioRecorder(fileDescriptor, object: AudioRecorder.Listener {
             override fun onDataReceived(bytes: ByteArray?) {
                 // Here we got data from audio recorder
                 if (bytes != null) {
@@ -97,6 +108,11 @@ class UsbActivity : Activity() {
     }
 
     private fun recordAudio() {
+        // clear tmp audio file
+        PrintWriter(tmpFile).run {
+            print("")
+            close()
+        }
         audioRecorder?.start()
         audioWaveScope.launch { updateAudioWave() }
     }
@@ -130,8 +146,6 @@ class UsbActivity : Activity() {
         usbDeviceConnection = usbManager.openDevice(usbDevice)
 
         usbDeviceConnection?.let { connection ->
-            connection.controlTransfer(0x21, 0x22, 0x1, 0, null, 0, 0)
-
             App.core?.setFileDescriptor(connection.fileDescriptor)
             App.core?.setRawUsbDescriptors(connection.rawDescriptors)
 
@@ -152,6 +166,7 @@ class UsbActivity : Activity() {
             usbDataInterface?.let {
                 Log.d("iRig", "Claim interface: ${it.id}")
                 if (connection.claimInterface(it, true)) {
+                    connection.controlTransfer(0x21, 0x22, 0x1, 0, null, 0, 0)
                     openUsbInterface(it)
                 }
             }
@@ -219,7 +234,7 @@ class UsbActivity : Activity() {
         fun onNewData(data: Int?)
     }
 
-    inner class ReadTaskFactory(private val readByteSize: Int = 4096,
+    inner class ReadTaskFactory(private val readByteSize: Int = 640,
         private val listener: ReadListener? = readListener) {
 
         var isRunning: Boolean = false
@@ -234,7 +249,7 @@ class UsbActivity : Activity() {
                 while (isRunning) {
                     synchronized(syncObject) {
                         val buffer = ByteArray(readByteSize)
-                        val bulkTransfer = usbDeviceConnection?.bulkTransfer(readEndPoint, buffer, readByteSize,1000)
+                        val bulkTransfer = usbDeviceConnection?.bulkTransfer(readEndPoint, buffer, readByteSize,100)
                         listener?.onNewData(bulkTransfer)
                     }
                 }

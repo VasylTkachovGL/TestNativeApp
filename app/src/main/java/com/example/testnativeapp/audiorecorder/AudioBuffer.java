@@ -1,5 +1,7 @@
 package com.example.testnativeapp.audiorecorder;
 
+import android.util.Log;
+
 /*
  * @author Tkachov Vasyl
  * @since 21.07.2021
@@ -33,6 +35,7 @@ public abstract class AudioBuffer {
 
         this.size = size;
         this.sampleRate = sampleRate;
+        Log.d("iRig", "Write buffer: " + size + " sampleRate: " + sampleRate);
         data = new byte[size];
     }
 
