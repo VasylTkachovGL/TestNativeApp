@@ -10,6 +10,10 @@ class Core {
 
     external fun modifyRecordedDataFromAndroid(bytes: ByteArray) : ByteArray
 
+    external fun setFileDescriptor(nativeFileDescriptor: Int)
+
+    external fun setRawUsbDescriptors(descriptors: ByteArray)
+
     companion object {
         // Used to load the 'native-lib' library on application startup.
         init {

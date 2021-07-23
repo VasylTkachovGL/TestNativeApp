@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.*
-import android.media.MediaRecorder
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -129,9 +128,13 @@ class UsbActivity : Activity() {
 
     private fun openUsbDevice(usbDevice: UsbDevice) {
         usbDeviceConnection = usbManager.openDevice(usbDevice)
-        usbDeviceConnection?.controlTransfer(0x21, 0x22, 0x1, 0, null, 0, 0)
 
         usbDeviceConnection?.let { connection ->
+            connection.controlTransfer(0x21, 0x22, 0x1, 0, null, 0, 0)
+
+            App.core?.setFileDescriptor(connection.fileDescriptor)
+            App.core?.setRawUsbDescriptors(connection.rawDescriptors)
+
             val interfaceCount = usbDevice.interfaceCount
             var interfaceIndex = 0
             while (true) {

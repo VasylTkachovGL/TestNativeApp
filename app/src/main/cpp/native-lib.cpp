@@ -26,3 +26,16 @@ JNIEXPORT jbyteArray JNICALL
 Java_com_example_testnativeapp_Core_modifyRecordedDataFromAndroid(JNIEnv *env, jobject /* this */, jbyteArray bytes) {
     return bytes;
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_testnativeapp_Core_setFileDescriptor(JNIEnv *env, jobject thiz, jint native_file_descriptor) {
+
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_example_testnativeapp_Core_setRawUsbDescriptors(JNIEnv *env, jobject thiz,
+                                                         jbyteArray descriptors) {
+
+}
