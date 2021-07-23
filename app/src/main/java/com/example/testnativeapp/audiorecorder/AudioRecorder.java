@@ -6,7 +6,6 @@ import android.media.MediaRecorder;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -64,66 +63,64 @@ public class AudioRecorder {
         }
 
         mAlive = true;
-        mThread =
-                new Thread() {
-                    @Override
-                    public void run() {
-                        setThreadPriority(THREAD_PRIORITY_AUDIO);
+        mThread = new Thread() {
+            @Override
+            public void run() {
+                setThreadPriority(THREAD_PRIORITY_AUDIO);
 
-                        Buffer buffer = new Buffer();
-                        bufferSize = buffer.size;
-                        AudioRecord record = new AudioRecord(
-                                MediaRecorder.AudioSource.DEFAULT,
-                                buffer.sampleRate,
-                                AudioFormat.CHANNEL_IN_MONO,
-                                AudioFormat.ENCODING_PCM_16BIT,
-                                buffer.size);
+                Buffer buffer = new Buffer();
+                bufferSize = buffer.size;
+                AudioRecord record = new AudioRecord(
+                        MediaRecorder.AudioSource.DEFAULT,
+                        buffer.sampleRate,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_8BIT,
+                        buffer.size);
 
-                        if (record.getState() != AudioRecord.STATE_INITIALIZED) {
-                            Log.w("iRig", "Failed to start recording");
-                            mAlive = false;
-                            return;
-                        }
+                if (record.getState() != AudioRecord.STATE_INITIALIZED) {
+                    Log.w("iRig", "Failed to start recording");
+                    mAlive = false;
+                    return;
+                }
 
-                        record.startRecording();
+                record.startRecording();
 
-                        // While we're running, we'll read the bytes from the AudioRecord and write them
-                        // to our output stream.
-                        try {
-                            while (isRecording()) {
-                                int len = record.read(buffer.data, 0, buffer.size);
-                                if (len >= 0 && len <= buffer.size) {
-
-
-                                    int ab = (buffer.data[0] & 0xff) << 8 | buffer.data[1];
-                                    amplitude = Math.abs(ab);
-
-                                    if (listener != null) {
-                                        listener.onDataReceived(buffer.data);
-                                    }
-                                    mOutputStream.write(buffer.data, 0, len);
-                                    mOutputStream.flush();
-                                } else {
-                                    Log.w("iRig", "Unexpected length returned: " + len);
-                                }
+                // While we're running, we'll read the bytes from the AudioRecord and write them
+                // to our output stream.
+                try {
+                    while (isRecording()) {
+                        int len = record.read(buffer.data, 0, buffer.size);
+                        if (len >= 0 && len <= buffer.size) {
+                            if (isRecording()) {
+                                mOutputStream.write(buffer.data, 0, len);
+                                mOutputStream.flush();
                             }
-                        } catch (IOException e) {
-                            Log.e("iRig", "Exception with recording stream", e);
-                        } finally {
-                            stopInternal();
-                            try {
-                                record.stop();
-                            } catch (IllegalStateException e) {
-                                Log.e("iRig", "Failed to stop AudioRecord", e);
+                            calculateSignalAmplitude(buffer.data[0], buffer.data[1]);
+                            if (listener != null) {
+                                listener.onDataReceived(buffer.data);
                             }
-                            record.release();
+                        } else {
+                            Log.w("iRig", "Unexpected length returned: " + len);
                         }
                     }
-                };
+                } catch (IOException e) {
+                    Log.e("iRig", "Exception with recording stream", e);
+                } finally {
+                    stopInternal();
+                    try {
+                        record.stop();
+                    } catch (IllegalStateException e) {
+                        Log.e("iRig", "Failed to stop AudioRecord", e);
+                    }
+                    record.release();
+                }
+            }
+        };
         mThread.start();
     }
 
     private void stopInternal() {
+        Log.w("iRig", "Stop internal");
         mAlive = false;
         try {
             mOutputStream.close();
@@ -143,6 +140,11 @@ public class AudioRecorder {
             Log.e("iRig", "Interrupted while joining AudioRecorder thread", e);
             Thread.currentThread().interrupt();
         }
+    }
+
+    private void calculateSignalAmplitude(Byte byte0, byte byte1) {
+        int ab = (byte0 & 0xff) << 8 | byte1;
+        amplitude = Math.abs(ab);
     }
 
     public interface Listener {

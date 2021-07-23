@@ -40,13 +40,16 @@ class UsbActivity : Activity() {
     private val writeDataScope = CoroutineScope(Dispatchers.IO + Job())
     private val audioWaveScope = CoroutineScope(Dispatchers.Main)
 
-    private val factory: ReadTaskFactory by lazy {
-        ReadTaskFactory()
-    }
-    private var readListener: ReadListener? = null
     private var audioRecorder: AudioRecorder? = null
     private val tmpFile: File by lazy {
         val f = File("$externalCacheDir${File.separator}iRig_tmp.pcm")
+        if (!f.exists()) {
+            f.createNewFile()
+        }
+        f
+    }
+    private val audioFile: File by lazy {
+        val f = File("$externalCacheDir${File.separator}iRig_sample.pcm")
         if (!f.exists()) {
             f.createNewFile()
         }
@@ -59,38 +62,28 @@ class UsbActivity : Activity() {
         discoverConnectedDevice(intent)
 
         startReadButton.setOnClickListener {
-            if (!factory.isRunning) {
+            if (audioRecorder?.isRecording == false) {
                 recordAudio()
-                factory.start()
                 startReadButton.text = "Stop recording"
             } else {
                 stopRecordingAudio()
-                factory.stop()
                 startReadButton.text = "Start recording"
             }
         }
 
-        val fileDescriptor = ParcelFileDescriptor.open(tmpFile, ParcelFileDescriptor.MODE_READ_WRITE)
-        audioRecorder = AudioRecorder(fileDescriptor, object: AudioRecorder.Listener {
+        val fileDescriptor =
+            ParcelFileDescriptor.open(tmpFile, ParcelFileDescriptor.MODE_READ_WRITE)
+        audioRecorder = AudioRecorder(fileDescriptor, object : AudioRecorder.Listener {
             override fun onDataReceived(bytes: ByteArray?) {
                 // Here we got data from audio recorder
                 if (bytes != null) {
-                    val modifiedData = App.core?.modifyRecordedDataFromAndroid(bytes)
-
+                    writeDataAsync(bytes)
+                    //val modifiedData = App.core?.modifyRecordedDataFromAndroid(bytes)
                     // Send modified recorded data to USB device
-                    modifiedData?.let { writeDataAsync(it) }
+                    //modifiedData?.let { writeDataAsync(it) }
                 }
             }
         })
-
-        readListener = object : ReadListener {
-            override fun onNewData(data: Int?) {
-                // Here we got data received from iRig
-                val info = StringBuilder()
-                info.append("Read data result: $data \n")
-                Log.d("iRig", info.toString())
-            }
-        }
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -100,26 +93,30 @@ class UsbActivity : Activity() {
 
     override fun onStop() {
         super.onStop()
-        if (!factory.isRunning) {
-            factory.stop()
+        if (audioRecorder?.isRecording == true) {
+            audioRecorder?.stop()
         }
         usbDeviceConnection?.releaseInterface(usbDataInterface)
         usbDeviceConnection?.close()
     }
 
     private fun recordAudio() {
-        // clear tmp audio file
-        PrintWriter(tmpFile).run {
-            print("")
-            close()
-        }
+        clearTmpAudioFile()
         audioRecorder?.start()
         audioWaveScope.launch { updateAudioWave() }
     }
 
     private fun stopRecordingAudio() {
         audioRecorder?.stop()
+        tmpFile.copyTo(audioFile, true)
         audioRecordView.recreate()
+    }
+
+    private fun clearTmpAudioFile() {
+        PrintWriter(tmpFile).run {
+            print("")
+            close()
+        }
     }
 
     private fun discoverConnectedDevice(intent: Intent?) {
@@ -166,7 +163,6 @@ class UsbActivity : Activity() {
             usbDataInterface?.let {
                 Log.d("iRig", "Claim interface: ${it.id}")
                 if (connection.claimInterface(it, true)) {
-                    connection.controlTransfer(0x21, 0x22, 0x1, 0, null, 0, 0)
                     openUsbInterface(it)
                 }
             }
@@ -230,43 +226,8 @@ class UsbActivity : Activity() {
         }
     }
 
-    interface ReadListener {
-        fun onNewData(data: Int?)
-    }
-
-    inner class ReadTaskFactory(private val readByteSize: Int = 640,
-        private val listener: ReadListener? = readListener) {
-
-        var isRunning: Boolean = false
-            private set
-        private lateinit var job: Job
-        private val syncObject = Object()
-
-        fun start() {
-            stop()
-            isRunning = true
-            job = GlobalScope.launch(Dispatchers.IO) {
-                while (isRunning) {
-                    synchronized(syncObject) {
-                        val buffer = ByteArray(readByteSize)
-                        val bulkTransfer = usbDeviceConnection?.bulkTransfer(readEndPoint, buffer, readByteSize,100)
-                        listener?.onNewData(bulkTransfer)
-                    }
-                }
-            }
-            job.start()
-        }
-
-        fun stop() {
-            isRunning = false
-            if (::job.isInitialized && job.isActive) {
-                job.cancel()
-            }
-        }
-    }
-
     private suspend fun updateAudioWave() {
-        while (factory.isRunning) {
+        while (audioRecorder?.isRecording == true) {
             delay(100)
             val currentMaxAmplitude = audioRecorder?.amplitude ?: 0
             audioRecordView.update(currentMaxAmplitude)
