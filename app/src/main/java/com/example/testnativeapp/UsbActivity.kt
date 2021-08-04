@@ -71,16 +71,11 @@ class UsbActivity : Activity() {
             }
         }
 
-        val fileDescriptor =
-            ParcelFileDescriptor.open(tmpFile, ParcelFileDescriptor.MODE_READ_WRITE)
-        audioRecorder = AudioRecorder(fileDescriptor, object : AudioRecorder.Listener {
+        audioRecorder = AudioRecorder(object : AudioRecorder.Listener {
             override fun onDataReceived(bytes: ByteArray?) {
                 // Here we got data from audio recorder
-                if (bytes != null) {
-                    writeDataAsync(bytes)
-                    //val modifiedData = App.core?.modifyRecordedDataFromAndroid(bytes)
-                    // Send modified recorded data to USB device
-                    //modifiedData?.let { writeDataAsync(it) }
+                bytes?.asSequence()?.chunked(64)?.forEach {
+                    writeDataAsync(it.toByteArray())
                 }
             }
         })
@@ -102,7 +97,10 @@ class UsbActivity : Activity() {
 
     private fun recordAudio() {
         clearTmpAudioFile()
-        audioRecorder?.start()
+        audioRecorder?.apply {
+            prepare(tmpFile)
+            start()
+        }
         audioWaveScope.launch { updateAudioWave() }
     }
 
@@ -187,7 +185,7 @@ class UsbActivity : Activity() {
      * Use this method to send data to USB device
      */
     private fun writeDataAsync(buffer: ByteArray) {
-        writeDataScope.launch {
+        val job: Job = writeDataScope.launch {
             writeData(buffer)
         }
     }
@@ -195,7 +193,7 @@ class UsbActivity : Activity() {
     private suspend fun writeData(bytes: ByteArray): Int = suspendCoroutine { continuation ->
         usbDeviceConnection?.apply {
             val transferResult = bulkTransfer(writeEndPoint, bytes, bytes.size, TIMEOUT)
-            Log.d("iRig", "Write data result: $transferResult")
+            Log.d("iRig", "Write data[${bytes.size}] result: $transferResult")
             continuation.resume(transferResult)
         }
     }
