@@ -8,24 +8,21 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.*
 import android.os.Bundle
-import android.os.ParcelFileDescriptor
 import android.util.Log
 import android.widget.Toast
 import com.example.testnativeapp.audiorecorder.AudioRecorder
+import com.example.testnativeapp.audiorecorder.ReadTaskFactory
 import kotlinx.android.synthetic.main.activity_usb.*
 import kotlinx.coroutines.*
 import java.io.File
 import java.io.PrintWriter
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
-import kotlin.time.ExperimentalTime
-
 
 /*
  * @author Tkachov Vasyl
  * @since 20.07.2021
  */
-@ExperimentalTime
 class UsbActivity : Activity() {
 
     private val usbManager: UsbManager by lazy {
@@ -33,11 +30,14 @@ class UsbActivity : Activity() {
     }
 
     private var usbDeviceConnection: UsbDeviceConnection? = null
-    private var usbDevice: UsbDevice? = null
     private var usbDataInterface: UsbInterface? = null
     private var readEndPoint: UsbEndpoint? = null
     private var writeEndPoint: UsbEndpoint? = null
-    private val writeDataScope = CoroutineScope(Dispatchers.IO + Job())
+    private var factory: ReadTaskFactory? = null
+    private var usbPermissionReceiver : BroadcastReceiver? = null
+    private var deviceStatusReceiver : BroadcastReceiver? = null
+
+    private val dataScope = CoroutineScope(Dispatchers.IO + Job())
     private val audioWaveScope = CoroutineScope(Dispatchers.Main)
 
     private var audioRecorder: AudioRecorder? = null
@@ -59,7 +59,7 @@ class UsbActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_usb)
-        discoverConnectedDevice(intent)
+        checkConnectedDevices()
 
         startReadButton.setOnClickListener {
             if (audioRecorder?.isRecording == false) {
@@ -79,20 +79,27 @@ class UsbActivity : Activity() {
                 }
             }
         })
+
+        deviceStatusReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent?) {
+                parseDeviceIntent(intent)
+            }
+        }
+        registerReceiver(deviceStatusReceiver, IntentFilter().apply {
+            addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
+        })
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
-        discoverConnectedDevice(intent)
+        parseDeviceIntent(intent)
     }
 
     override fun onStop() {
         super.onStop()
-        if (audioRecorder?.isRecording == true) {
-            audioRecorder?.stop()
-        }
-        usbDeviceConnection?.releaseInterface(usbDataInterface)
-        usbDeviceConnection?.close()
+        usbPermissionReceiver?.let {unregisterReceiver(usbPermissionReceiver)}
+        deviceStatusReceiver?.let {unregisterReceiver(deviceStatusReceiver)}
+        closeConnection()
     }
 
     private fun recordAudio() {
@@ -117,15 +124,30 @@ class UsbActivity : Activity() {
         }
     }
 
-    private fun discoverConnectedDevice(intent: Intent?) {
+    private fun checkConnectedDevices() {
+        val deviceList: MutableIterator<UsbDevice> = usbManager.deviceList.values.iterator()
+        deviceList.asSequence().filter {
+            it.productId == 26 && it.vendorId == 6499
+        }.firstOrNull()?.also {
+            openUsbDevice(it)
+        }
+    }
+
+    private fun parseDeviceIntent(intent: Intent?) {
         intent?.action?.let { action ->
             val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
-            usbDevice = device
-            if (device == null) {
-                finish()
-            } else if (action == UsbManager.ACTION_USB_DEVICE_ATTACHED) {
-                onDeviceAttached(device)
-            }
+            device?.let {
+                when (action) {
+                    UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
+                        Log.d("iRig", "ACTION_USB_DEVICE_ATTACHED")
+                        onDeviceAttached(device)
+                    }
+                    UsbManager.ACTION_USB_DEVICE_DETACHED -> {
+                        Log.d("iRig", "ACTION_USB_DEVICE_DETACHED")
+                        onDeviceDetached()
+                    }
+                }
+            } ?: finish()
         }
     }
 
@@ -137,7 +159,12 @@ class UsbActivity : Activity() {
         }
     }
 
+    private fun onDeviceDetached() {
+        closeConnection()
+    }
+
     private fun openUsbDevice(usbDevice: UsbDevice) {
+        Log.d("iRig", "openUsbDevice ${usbDevice.deviceName}")
         usbDeviceConnection = usbManager.openDevice(usbDevice)
 
         usbDeviceConnection?.let { connection ->
@@ -145,7 +172,7 @@ class UsbActivity : Activity() {
             App.core?.setRawUsbDescriptors(connection.rawDescriptors)
 
             val interfaceCount = usbDevice.interfaceCount
-            var interfaceIndex = 0
+            var interfaceIndex = 3
             while (true) {
                 if (interfaceIndex == interfaceCount) {
                     interfaceIndex = 6
@@ -158,34 +185,57 @@ class UsbActivity : Activity() {
             }
 
             usbDataInterface = usbDevice.getInterface(interfaceIndex)
-            usbDataInterface?.let {
-                Log.d("iRig", "Claim interface: ${it.id}")
-                if (connection.claimInterface(it, true)) {
-                    openUsbInterface(it)
+            usbDataInterface?.let { usbInterface ->
+                Log.d("iRig", "Claim interface ${usbInterface.id}")
+                val claimed = connection.claimInterface(usbInterface, true)
+                if (!claimed) {
+                    return
                 }
+
+                openUsbInterface(usbInterface)
+
+                factory = ReadTaskFactory(connection, readEndPoint)
+                factory?.setListener(object : ReadTaskFactory.ReadListener {
+                    override fun onDataReceived(data: Int?) {
+                        Log.d("iRig", "Received: $data")
+                    }
+                })
+                factory?.start()
             }
         }
     }
 
     private fun openUsbInterface(usbInterface: UsbInterface) {
-        val info = StringBuilder()
         for (j in 0 until usbInterface.endpointCount) {
             val endpoint = usbInterface.getEndpoint(j)
-            when (endpoint.direction) {
-                UsbConstants.USB_DIR_OUT -> writeEndPoint = endpoint
-                UsbConstants.USB_DIR_IN -> readEndPoint = endpoint
+            if (endpoint.type == UsbConstants.USB_ENDPOINT_XFER_BULK) {
+                when (endpoint.direction) {
+                    UsbConstants.USB_DIR_OUT -> writeEndPoint = endpoint
+                    UsbConstants.USB_DIR_IN -> readEndPoint = endpoint
+                }
             }
-            info.append(
-                "\nEndpoint ${endpoint.endpointNumber} type: ${endpoint.type} direction: ${endpoint.direction}")
+            Log.d("iRig", "Endpoint type: ${endpoint.type} direction: ${endpoint.direction} maxPacketSize: ${endpoint.maxPacketSize}")
         }
-        Log.d("iRig", info.toString())
+    }
+
+    private fun closeConnection() {
+        factory?.let {
+            if (it.isRunning) {
+                it.stop()
+            }
+        }
+        if (audioRecorder?.isRecording == true) {
+            audioRecorder?.stop()
+        }
+        usbDeviceConnection?.releaseInterface(usbDataInterface)
+        usbDeviceConnection?.close()
     }
 
     /**
      * Use this method to send data to USB device
      */
     private fun writeDataAsync(buffer: ByteArray) {
-        val job: Job = writeDataScope.launch {
+        dataScope.launch {
             writeData(buffer)
         }
     }
@@ -198,30 +248,25 @@ class UsbActivity : Activity() {
         }
     }
 
-    private fun requestUsbPermission(device: UsbDevice) {
+    private fun requestUsbPermission(usbDevice: UsbDevice) {
         val permissionIntent = PendingIntent.getBroadcast(this, 0, Intent(ACTION_USB_PERMISSION), 0)
-        val filter = IntentFilter(ACTION_USB_PERMISSION)
-        registerReceiver(usbReceiver, filter)
-        usbManager.requestPermission(device, permissionIntent)
-    }
-
-    private val usbReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            Log.d("iRig", "onReceive: ${intent.action}")
-            if (ACTION_USB_PERMISSION == intent.action) {
-                synchronized(this) {
-                    val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
-                    if (intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)) {
-                        device?.let {
-                            openUsbDevice(it)
-                        }
-                    } else {
-                        Toast.makeText(this@UsbActivity, "Permission denied for device $device",
-                            Toast.LENGTH_LONG)
-                    }
+        usbPermissionReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                Log.d("iRig", "UsbPermissionReceiver: ${intent.action}")
+                if (ACTION_USB_PERMISSION != intent.action) {
+                    return
+                }
+                val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                val permissionGranted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                if (permissionGranted) {
+                    device?.let { openUsbDevice(it) }
+                } else {
+                    Toast.makeText(context, "Permission denied: $device", Toast.LENGTH_LONG).show()
                 }
             }
         }
+        registerReceiver(usbPermissionReceiver, IntentFilter(ACTION_USB_PERMISSION))
+        usbManager.requestPermission(usbDevice, permissionIntent)
     }
 
     private suspend fun updateAudioWave() {
@@ -233,7 +278,7 @@ class UsbActivity : Activity() {
     }
 
     companion object {
-        private const val ACTION_USB_PERMISSION = "com.android.example.USB_PERMISSION"
+        private const val ACTION_USB_PERMISSION = "com.example.testnativeapp.USB_PERMISSION"
         private const val TIMEOUT = 1000
     }
 }
