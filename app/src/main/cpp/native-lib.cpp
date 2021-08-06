@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <string>
-#include "l"
+#include <libusb.h>
 
 // Test function
 extern "C" JNIEXPORT jstring JNICALL
@@ -24,18 +24,18 @@ Java_com_example_testnativeapp_Core_getExternalStoragePath(
 }
 extern "C"
 JNIEXPORT jbyteArray JNICALL
-Java_com_example_testnativeapp_Core_modifyRecordedDataFromAndroid(JNIEnv *env, jobject /* this */, jbyteArray bytes) {
+Java_com_example_testnativeapp_Core_modifyRecordedDataFromAndroid(JNIEnv *env, jobject thiz, jbyteArray bytes) {
     return bytes;
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_testnativeapp_Core_setFileDescriptor(JNIEnv *env, jobject thiz, jint fileDescriptor) {
-//    libusb_context *ctx;
-//    libusb_device_handle *devh;
+    libusb_context *ctx;
+    libusb_device_handle *devh;
 //    libusb_set_option(&ctx, LIBUSB_OPTION_WEAK_AUTHORITY, NULL);
-//    libusb_init(&ctx);
-//    libusb_wrap_sys_device(NULL, (intptr_t)fileDescriptor, &devh);
+    libusb_init(&ctx);
+    libusb_wrap_sys_device(NULL, (intptr_t)fileDescriptor, &devh);
 }
 
 extern "C"
