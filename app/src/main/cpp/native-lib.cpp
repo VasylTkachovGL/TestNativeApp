@@ -31,11 +31,6 @@ Java_com_example_testnativeapp_Core_modifyRecordedDataFromAndroid(JNIEnv *env, j
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_testnativeapp_Core_setFileDescriptor(JNIEnv *env, jobject thiz, jint fileDescriptor) {
-    libusb_context *ctx;
-    libusb_device_handle *devh;
-//    libusb_set_option(&ctx, LIBUSB_OPTION_WEAK_AUTHORITY, NULL);
-    libusb_init(&ctx);
-    libusb_wrap_sys_device(NULL, (intptr_t)fileDescriptor, &devh);
 }
 
 extern "C"
