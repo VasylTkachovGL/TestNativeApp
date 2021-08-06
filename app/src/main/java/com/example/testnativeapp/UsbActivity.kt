@@ -34,8 +34,8 @@ class UsbActivity : Activity() {
     private var readEndPoint: UsbEndpoint? = null
     private var writeEndPoint: UsbEndpoint? = null
     private var factory: ReadTaskFactory? = null
-    private var usbPermissionReceiver : BroadcastReceiver? = null
-    private var deviceStatusReceiver : BroadcastReceiver? = null
+    private var usbPermissionReceiver: BroadcastReceiver? = null
+    private var deviceStatusReceiver: BroadcastReceiver? = null
 
     private val dataScope = CoroutineScope(Dispatchers.IO + Job())
     private val audioWaveScope = CoroutineScope(Dispatchers.Main)
@@ -97,40 +97,9 @@ class UsbActivity : Activity() {
 
     override fun onStop() {
         super.onStop()
-        usbPermissionReceiver?.let {unregisterReceiver(usbPermissionReceiver)}
-        deviceStatusReceiver?.let {unregisterReceiver(deviceStatusReceiver)}
+        usbPermissionReceiver?.let { unregisterReceiver(usbPermissionReceiver) }
+        deviceStatusReceiver?.let { unregisterReceiver(deviceStatusReceiver) }
         closeConnection()
-    }
-
-    private fun recordAudio() {
-        clearTmpAudioFile()
-        audioRecorder?.apply {
-            prepare(tmpFile)
-            start()
-        }
-        audioWaveScope.launch { updateAudioWave() }
-    }
-
-    private fun stopRecordingAudio() {
-        audioRecorder?.stop()
-        tmpFile.copyTo(audioFile, true)
-        audioRecordView.recreate()
-    }
-
-    private fun clearTmpAudioFile() {
-        PrintWriter(tmpFile).run {
-            print("")
-            close()
-        }
-    }
-
-    private fun checkConnectedDevices() {
-        val deviceList: MutableIterator<UsbDevice> = usbManager.deviceList.values.iterator()
-        deviceList.asSequence().filter {
-            it.productId == 26 && it.vendorId == 6499
-        }.firstOrNull()?.also {
-            openUsbDevice(it)
-        }
     }
 
     private fun parseDeviceIntent(intent: Intent?) {
@@ -163,77 +132,55 @@ class UsbActivity : Activity() {
         closeConnection()
     }
 
+    private fun checkConnectedDevices() {
+        val deviceList: MutableIterator<UsbDevice> = usbManager.deviceList.values.iterator()
+        deviceList.asSequence().filter {
+            it.productId == 26 && it.vendorId == 6499
+        }.firstOrNull()?.also {
+            onDeviceAttached(it)
+        }
+    }
+
     private fun openUsbDevice(usbDevice: UsbDevice) {
-        Log.d("iRig", "openUsbDevice ${usbDevice.deviceName}")
+        Log.d("iRig", "openUsbDevice ${usbDevice.productName}")
         usbDeviceConnection = usbManager.openDevice(usbDevice)
 
         usbDeviceConnection?.let { connection ->
             App.core?.setFileDescriptor(connection.fileDescriptor)
             App.core?.setRawUsbDescriptors(connection.rawDescriptors)
 
-            val interfaceCount = usbDevice.interfaceCount
-            var interfaceIndex = 3
-            while (true) {
-                if (interfaceIndex == interfaceCount) {
-                    interfaceIndex = 6
-                    break
+            for (interfaceIndex in 0 until usbDevice.interfaceCount) {
+                val usbInterface = usbDevice.getInterface(interfaceIndex)
+                val isClaimed = connection.claimInterface(usbInterface, true)
+                Log.d("iRig","Interface id: ${usbInterface.id} class: ${usbInterface.interfaceClass} name: ${usbInterface.name}")
+                if (!isClaimed) {
+                    continue
                 }
-                if (usbDevice.getInterface(interfaceIndex).id == 3) {
-                    break
-                }
-                interfaceIndex++
-            }
-
-            usbDataInterface = usbDevice.getInterface(interfaceIndex)
-            usbDataInterface?.let { usbInterface ->
-                Log.d("iRig", "Claim interface ${usbInterface.id}")
-                val claimed = connection.claimInterface(usbInterface, true)
-                if (!claimed) {
-                    return
-                }
-
-                openUsbInterface(usbInterface)
-
-                factory = ReadTaskFactory(connection, readEndPoint)
-                factory?.setListener(object : ReadTaskFactory.ReadListener {
-                    override fun onDataReceived(data: Int?) {
-                        Log.d("iRig", "Received: $data")
+                for (index in 0 until usbInterface.endpointCount) {
+                    val endpoint = usbInterface.getEndpoint(index)
+                    if (endpoint.type == UsbConstants.USB_ENDPOINT_XFER_BULK) {
+                        when (endpoint.direction) {
+                            UsbConstants.USB_DIR_OUT -> writeEndPoint = endpoint
+                            UsbConstants.USB_DIR_IN -> readEndPoint = endpoint
+                        }
                     }
-                })
-                factory?.start()
-            }
-        }
-    }
-
-    private fun openUsbInterface(usbInterface: UsbInterface) {
-        for (j in 0 until usbInterface.endpointCount) {
-            val endpoint = usbInterface.getEndpoint(j)
-            if (endpoint.type == UsbConstants.USB_ENDPOINT_XFER_BULK) {
-                when (endpoint.direction) {
-                    UsbConstants.USB_DIR_OUT -> writeEndPoint = endpoint
-                    UsbConstants.USB_DIR_IN -> readEndPoint = endpoint
+                    Log.d("iRig","- Endpoint type: ${endpoint.type} direction: ${endpoint.direction} maxPacketSize: ${endpoint.maxPacketSize}")
                 }
             }
-            Log.d("iRig", "Endpoint type: ${endpoint.type} direction: ${endpoint.direction} maxPacketSize: ${endpoint.maxPacketSize}")
-        }
-    }
-
-    private fun closeConnection() {
-        factory?.let {
-            if (it.isRunning) {
-                it.stop()
+            if (writeEndPoint == null || readEndPoint == null) {
+                return
             }
+
+            factory = ReadTaskFactory(connection, readEndPoint)
+            factory?.setListener(object : ReadTaskFactory.ReadListener {
+                override fun onDataReceived(data: Int?) {
+                    Log.d("iRig", "Received: $data")
+                }
+            })
+            factory?.start()
         }
-        if (audioRecorder?.isRecording == true) {
-            audioRecorder?.stop()
-        }
-        usbDeviceConnection?.releaseInterface(usbDataInterface)
-        usbDeviceConnection?.close()
     }
 
-    /**
-     * Use this method to send data to USB device
-     */
     private fun writeDataAsync(buffer: ByteArray) {
         dataScope.launch {
             writeData(buffer)
@@ -257,7 +204,8 @@ class UsbActivity : Activity() {
                     return
                 }
                 val device: UsbDevice? = intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
-                val permissionGranted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                val permissionGranted =
+                    intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
                 if (permissionGranted) {
                     device?.let { openUsbDevice(it) }
                 } else {
@@ -267,6 +215,41 @@ class UsbActivity : Activity() {
         }
         registerReceiver(usbPermissionReceiver, IntentFilter(ACTION_USB_PERMISSION))
         usbManager.requestPermission(usbDevice, permissionIntent)
+    }
+
+    private fun closeConnection() {
+        factory?.let {
+            if (it.isRunning) {
+                it.stop()
+            }
+        }
+        if (audioRecorder?.isRecording == true) {
+            audioRecorder?.stop()
+        }
+        usbDeviceConnection?.releaseInterface(usbDataInterface)
+        usbDeviceConnection?.close()
+    }
+
+    private fun recordAudio() {
+        clearTmpAudioFile()
+        audioRecorder?.apply {
+            prepare(tmpFile)
+            start()
+        }
+        audioWaveScope.launch { updateAudioWave() }
+    }
+
+    private fun stopRecordingAudio() {
+        audioRecorder?.stop()
+        tmpFile.copyTo(audioFile, true)
+        audioRecordView.recreate()
+    }
+
+    private fun clearTmpAudioFile() {
+        PrintWriter(tmpFile).run {
+            print("")
+            close()
+        }
     }
 
     private suspend fun updateAudioWave() {
