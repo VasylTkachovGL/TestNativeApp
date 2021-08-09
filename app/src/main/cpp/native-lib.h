@@ -1,0 +1,10 @@
+//
+// Created by Fromitt on 10.08.2021.
+//
+
+#ifndef TESTNATIVEAPP_NATIVE_LIB_H
+#define TESTNATIVEAPP_NATIVE_LIB_H
+
+
+
+#endif //TESTNATIVEAPP_NATIVE_LIB_H
