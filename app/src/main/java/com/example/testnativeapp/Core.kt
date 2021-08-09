@@ -8,16 +8,14 @@ class Core {
 
     external fun getExternalStoragePath(): String
 
-    external fun modifyRecordedDataFromAndroid(bytes: ByteArray) : ByteArray
+    external fun recordData(bytes: ByteArray)
 
-    external fun setFileDescriptor(fileDescriptor: Int)
-
-    external fun setRawUsbDescriptors(descriptors: ByteArray)
+    external fun init(fileDescriptor: Int, libUsbHandleArray: LongArray) : Boolean
 
     companion object {
         // Used to load the 'native-libs' library on application startup.
         init {
-            System.loadLibrary("native-libs")
+            System.loadLibrary("native-lib")
         }
     }
 }

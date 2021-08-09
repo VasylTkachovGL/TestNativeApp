@@ -39,6 +39,7 @@ class UsbActivity : Activity() {
 
     private val dataScope = CoroutineScope(Dispatchers.IO + Job())
     private val audioWaveScope = CoroutineScope(Dispatchers.Main)
+    private var readJob: Deferred<Unit>? = null
 
     private var audioRecorder: AudioRecorder? = null
     private val tmpFile: File by lazy {
@@ -97,6 +98,7 @@ class UsbActivity : Activity() {
 
     override fun onStop() {
         super.onStop()
+        readJob?.cancel()
         usbPermissionReceiver?.let { unregisterReceiver(usbPermissionReceiver) }
         deviceStatusReceiver?.let { unregisterReceiver(deviceStatusReceiver) }
         closeConnection()
@@ -146,9 +148,6 @@ class UsbActivity : Activity() {
         usbDeviceConnection = usbManager.openDevice(usbDevice)
 
         usbDeviceConnection?.let { connection ->
-            App.core?.setFileDescriptor(connection.fileDescriptor)
-            App.core?.setRawUsbDescriptors(connection.rawDescriptors)
-
             for (interfaceIndex in 0 until usbDevice.interfaceCount) {
                 val usbInterface = usbDevice.getInterface(interfaceIndex)
                 val isClaimed = connection.claimInterface(usbInterface, true)
@@ -166,10 +165,17 @@ class UsbActivity : Activity() {
                     }
                     Log.d("iRig","- Endpoint type: ${endpoint.type} direction: ${endpoint.direction} maxPacketSize: ${endpoint.maxPacketSize}")
                 }
+                usbDataInterface = usbInterface
             }
             if (writeEndPoint == null || readEndPoint == null) {
                 return
             }
+
+            App.core?.init(connection.fileDescriptor, longArrayOf(0))
+
+//            readJob = dataScope.launchPeriodicAsync(1000) {
+//                App.core?.recordData(ByteArray(0))
+//            }
 
             factory = ReadTaskFactory(connection, readEndPoint)
             factory?.setListener(object : ReadTaskFactory.ReadListener {
@@ -177,7 +183,18 @@ class UsbActivity : Activity() {
                     Log.d("iRig", "Received: $data")
                 }
             })
-            factory?.start()
+//            factory?.start()
+        }
+    }
+
+    fun CoroutineScope.launchPeriodicAsync(repeatMillis: Long, action: () -> Unit) = this.async {
+        if (repeatMillis > 0) {
+            while (isActive) {
+                action()
+                delay(repeatMillis)
+            }
+        } else {
+            action()
         }
     }
 

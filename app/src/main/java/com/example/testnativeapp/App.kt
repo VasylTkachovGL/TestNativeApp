@@ -5,7 +5,8 @@ import android.app.Application
 /*
 * @author Tkachov Vasyl
 * @since 20.07.2021
-*/public class App : Application() {
+*/
+class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
