@@ -16,6 +16,7 @@ public:
         Input
     };
 
+    UacDevice();
     UacDevice(jint fd, uint16_t pid);
     ~UacDevice();
 
