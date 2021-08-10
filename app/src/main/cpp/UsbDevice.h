@@ -11,12 +11,10 @@ struct libusb_transfer;
 
 class UsbDevice
 {
-    libusb_device_handle * hdev;
-
     std::vector<libusb_transfer *>  availableXfers;
 
 public:
-    UsbDevice(jint fd, uint16_t pid);
+    UsbDevice(jint fd);
     ~UsbDevice();
 
     int openDevice(uint32_t fd);
@@ -39,6 +37,7 @@ protected:
 
 private:
     libusb_context *m_context;
+    libusb_device_handle * hdev;
 };
 
 #endif //_USB_DEVICE_H

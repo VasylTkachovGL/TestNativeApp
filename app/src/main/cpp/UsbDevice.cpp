@@ -8,7 +8,7 @@
 static const size_t NUM_TRANSFERS = 10;
 static const uint8_t NUM_PACKETS = 2;
 
-UsbDevice::UsbDevice(jint fd, uint16_t pid)
+UsbDevice::UsbDevice(jint fd)
 {
     m_context = 0;
 
@@ -17,8 +17,12 @@ UsbDevice::UsbDevice(jint fd, uint16_t pid)
     int ret = libusb_init(NULL);
     check(ret, "libusb_init()");
 
-    // Now open the device with specified VID/PID
-    // hdev = libusb_open_device_with_vid_pid(NULL, vid, pid);
+    // The Android system owns the USB devices, and we can only ask the OS to do USB operations.
+    // to do so, Android gives us a file descriptor we can do I/O operations on to perform USB read/writes.
+    // opening and closing of this device must be done by the Java layer. we can call libusb_close(),
+    // and in fact we should once we're done with the native handle, but we're not allowed to call
+    // libusb_open(). instead, we use libusb_wrap_sys_device() to open the file descriptor that Java
+    // gave us.
     libusb_wrap_sys_device(NULL, fd, &hdev);
     check(hdev != NULL, "open_device_with_vid_pid");
 
@@ -179,14 +183,7 @@ void UsbDevice::receiveIsoData(uint8_t ep, unsigned char * data, size_t size, ui
  * @returns LIBUSB_ERROR_NO_DEVICE if the Device becomes disconnected
  *
  */
-// modified for Android
 int UsbDevice::openDevice(uint32_t fd) {
-    // The Android system owns the USB devices, and we can only ask the OS to do USB operations.
-    // to do so, Android gives us a file descriptor we can do I/O operations on to perform USB read/writes.
-    // opening and closing of this device must be done by the Java layer. we can call libusb_close(),
-    // and in fact we should once we're done with the native handle, but we're not allowed to call
-    // libusb_open(). instead, we use libusb_wrap_sys_device() to open the file descriptor that Java
-    // gave us.
     int retCode = libusb_wrap_sys_device(m_context, fd, &hdev);
     if (retCode == 0) {
         retCode = libusb_set_configuration(hdev, 1);

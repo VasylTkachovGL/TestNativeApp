@@ -171,7 +171,7 @@ class UsbActivity : Activity() {
                 return
             }
 
-            App.core?.init(connection.fileDescriptor, longArrayOf(0))
+            App.core?.init(connection.fileDescriptor)
 
 //            readJob = dataScope.launchPeriodicAsync(1000) {
 //                App.core?.recordData(ByteArray(0))
@@ -184,17 +184,6 @@ class UsbActivity : Activity() {
                 }
             })
 //            factory?.start()
-        }
-    }
-
-    fun CoroutineScope.launchPeriodicAsync(repeatMillis: Long, action: () -> Unit) = this.async {
-        if (repeatMillis > 0) {
-            while (isActive) {
-                action()
-                delay(repeatMillis)
-            }
-        } else {
-            action()
         }
     }
 

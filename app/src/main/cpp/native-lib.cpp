@@ -7,9 +7,6 @@
 
 #define TAG "iRigJNI"
 
-static const uint16_t IRIG_UA_VID = 0x6499;
-static const uint16_t IRIG_UA_PID = 0x0026;
-
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_testnativeapp_Core_recordData(JNIEnv *env, jobject thiz, jbyteArray bytes) {
@@ -17,9 +14,9 @@ Java_com_example_testnativeapp_Core_recordData(JNIEnv *env, jobject thiz, jbyteA
 
 extern "C"
 JNIEXPORT jboolean JNICALL
-Java_com_example_testnativeapp_Core_init(JNIEnv *env, jobject thiz, jint fd, jlongArray handle) {
+Java_com_example_testnativeapp_Core_init(JNIEnv *env, jobject thiz, jint fd) {
     LOG_D(TAG, "Init. File descriptor: %d", fd);
-    UacDevice device(fd, IRIG_UA_PID);
+    UacDevice device(fd);
     LOG_D(TAG, "Preparing audio input");
     device.prepareAudioInput();
 

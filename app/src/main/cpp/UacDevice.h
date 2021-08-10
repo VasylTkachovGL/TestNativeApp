@@ -17,7 +17,7 @@ public:
     };
 
     UacDevice();
-    UacDevice(jint fd, uint16_t pid);
+    UacDevice(jint fd);
     ~UacDevice();
 
     void prepareAudioOutput();
