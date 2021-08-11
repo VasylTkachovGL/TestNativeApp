@@ -21,17 +21,16 @@ Java_com_example_testnativeapp_Core_init(JNIEnv *env, jobject thiz, jint fd) {
     device.prepareAudioInput();
 
     LOG_D(TAG, "Setting audio input parameters");
-    device.setChannelSampleRate(UacDevice::Input, 48000);
+    device.setChannelSampleRate(UacDevice::Input, 44100);
 
     LOG_D(TAG, "Preparing audio output");
     device.prepareAudioOutput();
 
     LOG_D(TAG, "Setting audio output parameters");
-    device.setChannelVolume(UacDevice::Output, 5);
-    device.setChannelSampleRate(UacDevice::Output, 48000);
+    device.setChannelSampleRate(UacDevice::Output, 44100);
 
     // Record sample
-    size_t size = 10 * 48000 * 3; // 10 second(s) of 48kHz audio at 24 bit/sample
+    size_t size = 10 * 44100 * 3; // 10 second(s) of 48kHz audio at 24 bit/sample
     std::unique_ptr<unsigned char[]> pcmData(new unsigned char[size]);
     device.recordPCM(pcmData.get(), size);
 
