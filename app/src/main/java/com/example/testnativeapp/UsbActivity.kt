@@ -63,13 +63,16 @@ class UsbActivity : Activity() {
         checkConnectedDevices()
 
         startReadButton.setOnClickListener {
-            if (audioRecorder?.isRecording == false) {
-                recordAudio()
-                startReadButton.text = "Stop recording"
-            } else {
-                stopRecordingAudio()
-                startReadButton.text = "Start recording"
+            usbDeviceConnection?.let { connection ->
+                App.core?.init(connection.fileDescriptor)
             }
+//            if (audioRecorder?.isRecording == false) {
+//                recordAudio()
+//                startReadButton.text = "Stop recording"
+//            } else {
+//                stopRecordingAudio()
+//                startReadButton.text = "Start recording"
+//            }
         }
 
         audioRecorder = AudioRecorder(object : AudioRecorder.Listener {
@@ -128,10 +131,12 @@ class UsbActivity : Activity() {
         } else {
             requestUsbPermission(device)
         }
+        startReadButton.isEnabled = true
     }
 
     private fun onDeviceDetached() {
         closeConnection()
+        startReadButton.isEnabled = false
     }
 
     private fun checkConnectedDevices() {
@@ -170,8 +175,6 @@ class UsbActivity : Activity() {
             if (writeEndPoint == null || readEndPoint == null) {
                 return
             }
-
-            App.core?.init(connection.fileDescriptor)
 
 //            readJob = dataScope.launchPeriodicAsync(1000) {
 //                App.core?.recordData(ByteArray(0))

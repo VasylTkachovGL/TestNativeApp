@@ -23,8 +23,15 @@ Java_com_example_testnativeapp_Core_init(JNIEnv *env, jobject thiz, jint fd) {
     LOG_D(TAG, "Setting audio input parameters");
     device.setChannelSampleRate(UacDevice::Input, 48000);
 
-    // Record test sample
-    size_t size = 5 * 48000 * 3; // 5 seconds of 48kHz audio at 24 bit/sample
+    LOG_D(TAG, "Preparing audio output");
+    device.prepareAudioOutput();
+
+    LOG_D(TAG, "Setting audio output parameters");
+    device.setChannelVolume(UacDevice::Output, 5);
+    device.setChannelSampleRate(UacDevice::Output, 48000);
+
+    // Record sample
+    size_t size = 10 * 48000 * 3; // 10 second(s) of 48kHz audio at 24 bit/sample
     std::unique_ptr<unsigned char[]> pcmData(new unsigned char[size]);
     device.recordPCM(pcmData.get(), size);
 
@@ -35,19 +42,14 @@ Java_com_example_testnativeapp_Core_init(JNIEnv *env, jobject thiz, jint fd) {
         pcmData2[sample*2+1] = pcmData[sample*3+1];
     }
 
+    device.playPCM(pcmData2.get(), size);
+
 //    FILE * pcm = fopen(argv[2],"w+b");
 //    check(pcm != NULL, "fopen() pcm file");
 //    fwrite(pcmData2.get(), 1, size/3*2, pcm);
 //    fclose(pcm);
 
-    //Play sample
-    LOG_D(TAG, "Preparing audio output");
-    device.prepareAudioOutput();
-
-    LOG_D(TAG, "Setting audio output parameters");
-    device.setChannelVolume(UacDevice::Output, 5);
-    device.setChannelSampleRate(UacDevice::Output, 48000);
-
+    // Play sample
 //    FILE * pcm = fopen(argv[2],"rb");
 //    check(pcm != NULL, "fopen() pcm file");
 //    fseek(pcm, 0, SEEK_END);
@@ -61,7 +63,7 @@ Java_com_example_testnativeapp_Core_init(JNIEnv *env, jobject thiz, jint fd) {
 //    check(readBytes == size, "Cant read PCM data");
 //    fclose(pcm);
 
-    device.playPCM(pcmData2.get(), size);
+//    device.playPCM(pcmData.get(), size);
 
     return (jboolean) JNI_TRUE;
 }

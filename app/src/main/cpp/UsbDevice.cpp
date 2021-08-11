@@ -172,6 +172,53 @@ void UsbDevice::receiveIsoData(uint8_t ep, unsigned char * data, size_t size, ui
     }
 }
 
+void UsbDevice::loopback(uint8_t epIn, uint8_t epOut, unsigned char * data, unsigned char * dataOut, size_t size, uint16_t packetSizeIn, uint16_t packetSizeOut) {
+    size_t bytesToGo = size * 2;
+
+    while(bytesToGo > 0)
+    {
+        while(availableXfers.size() > 0)
+        {
+            size_t chunkSizeIn = std::min((size_t)packetSizeIn * NUM_PACKETS, bytesToGo);
+
+            libusb_transfer * xfer = availableXfers.back();
+            availableXfers.pop_back();
+
+            libusb_fill_iso_transfer(xfer, hdev, epIn, data, chunkSizeIn, NUM_PACKETS, transferCompleteCB, this, 1000);
+            libusb_set_iso_packet_lengths(xfer, packetSizeIn);
+            libusb_submit_transfer(xfer);
+
+            data += chunkSizeIn;
+            bytesToGo -= chunkSizeIn;
+        }
+
+        while(availableXfers.size() > 0)
+        {
+            size_t chunkSizeOut = std::min((size_t)packetSizeOut * NUM_PACKETS, bytesToGo);
+
+            libusb_transfer * xfer = availableXfers.back();
+            availableXfers.pop_back();
+
+            libusb_fill_iso_transfer(xfer, hdev, epOut, dataOut, chunkSizeOut, NUM_PACKETS, transferCompleteCB, this, 1000);
+            libusb_set_iso_packet_lengths(xfer, packetSizeOut);
+            libusb_submit_transfer(xfer);
+
+            dataOut += chunkSizeOut;
+            bytesToGo -= chunkSizeOut;
+        }
+
+        int ret = libusb_handle_events(NULL);
+        check(ret, "libusb_handle_events()");
+    }
+
+    // Wait for remaining packets to be sent
+    while(availableXfers.size() != NUM_TRANSFERS)
+    {
+        int ret = libusb_handle_events(NULL);
+        check(ret, "libusb_handle_events()");
+    }
+}
+
 /**
  * Opens a device on an Android-owned USB file descriptor.
  *

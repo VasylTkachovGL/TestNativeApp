@@ -28,6 +28,7 @@ public:
 
     void sendIsoData(uint8_t ep, unsigned char * data, size_t size, uint16_t packetSize);
     void receiveIsoData(uint8_t ep, unsigned char * data, size_t size, uint16_t packetSize);
+    void loopback(uint8_t epIn, uint8_t epOut, unsigned char * data, unsigned char * dataOut, size_t size, uint16_t packetSizeIn, uint16_t packetSizeOut);
 
     void closeInterface(uint8_t interface);
 
