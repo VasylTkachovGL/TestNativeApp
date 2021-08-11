@@ -42,7 +42,7 @@ Java_com_example_testnativeapp_Core_init(JNIEnv *env, jobject thiz, jint fd) {
         pcmData2[sample*2+1] = pcmData[sample*3+1];
     }
 
-    device.playPCM(pcmData2.get(), size);
+    device.playPCM(pcmData2.get(), size/3*2);
 
 //    FILE * pcm = fopen(argv[2],"w+b");
 //    check(pcm != NULL, "fopen() pcm file");
