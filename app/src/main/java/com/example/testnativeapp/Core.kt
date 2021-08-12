@@ -10,7 +10,7 @@ class Core {
 
     external fun recordData(bytes: ByteArray)
 
-    external fun init(fileDescriptor: Int) : Boolean
+    external fun init(fileDescriptor: Int, filePath: String) : Boolean
 
     companion object {
         // Used to load the 'native-libs' library on application startup.

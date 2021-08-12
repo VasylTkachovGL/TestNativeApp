@@ -1,17 +1,17 @@
 #include "UsbDevice.h"
 #include "Utils.h"
+#include "log.h"
 
 #include <libusb.h>
 #include <stdio.h>
 #include <jni.h>
 
+#define TAG "UsbDevice"
 static const size_t NUM_TRANSFERS = 10;
 static const uint8_t NUM_PACKETS = 2;
 
 UsbDevice::UsbDevice(jint fd)
 {
-    m_context = 0;
-
     // Init the library
     libusb_set_option(NULL, LIBUSB_OPTION_WEAK_AUTHORITY);
     int ret = libusb_init(NULL);
@@ -107,6 +107,7 @@ void UsbDevice::sendIsoData(uint8_t ep, unsigned char * data, size_t size, uint1
 {
     size_t totalPackets = size / packetSize;
     size_t bytesToGo = size;
+    LOG_D(TAG, "sendIsoData packet size: %d", packetSize);
 
     while(bytesToGo > 0)
     {
@@ -117,7 +118,7 @@ void UsbDevice::sendIsoData(uint8_t ep, unsigned char * data, size_t size, uint1
 
             libusb_transfer * xfer = availableXfers.back();
             availableXfers.pop_back();
-            libusb_fill_iso_transfer(xfer, hdev, ep, data, chunkSize, NUM_PACKETS, transferCompleteCB, this, 1000);
+            libusb_fill_iso_transfer(xfer, hdev, ep, data, chunkSize, NUM_PACKETS, transferCompleteCB, this, 100);
             libusb_set_iso_packet_lengths(xfer, packetSize);
             libusb_submit_transfer(xfer);
 
@@ -141,6 +142,7 @@ void UsbDevice::receiveIsoData(uint8_t ep, unsigned char * data, size_t size, ui
 {
     size_t totalPackets = size / packetSize;
     size_t bytesToGo = size;
+    LOG_D(TAG, "receiveIsoData packet size: %d", packetSize);
 
     while(bytesToGo > 0)
     {
@@ -152,7 +154,7 @@ void UsbDevice::receiveIsoData(uint8_t ep, unsigned char * data, size_t size, ui
             libusb_transfer * xfer = availableXfers.back();
             availableXfers.pop_back();
 
-            libusb_fill_iso_transfer(xfer, hdev, ep, data, chunkSize, NUM_PACKETS, transferCompleteCB, this, 1000);
+            libusb_fill_iso_transfer(xfer, hdev, ep, data, chunkSize, NUM_PACKETS, transferCompleteCB, this, 100);
             libusb_set_iso_packet_lengths(xfer, packetSize);
             libusb_submit_transfer(xfer);
 
@@ -173,80 +175,5 @@ void UsbDevice::receiveIsoData(uint8_t ep, unsigned char * data, size_t size, ui
 }
 
 void UsbDevice::loopback(uint8_t epIn, uint8_t epOut, unsigned char * data, unsigned char * dataOut, size_t size, uint16_t packetSizeIn, uint16_t packetSizeOut) {
-    size_t bytesToGo = size * 2;
-
-    while(bytesToGo > 0)
-    {
-        while(availableXfers.size() > 0)
-        {
-            size_t chunkSizeIn = std::min((size_t)packetSizeIn * NUM_PACKETS, bytesToGo);
-
-            libusb_transfer * xfer = availableXfers.back();
-            availableXfers.pop_back();
-
-            libusb_fill_iso_transfer(xfer, hdev, epIn, data, chunkSizeIn, NUM_PACKETS, transferCompleteCB, this, 1000);
-            libusb_set_iso_packet_lengths(xfer, packetSizeIn);
-            libusb_submit_transfer(xfer);
-
-            data += chunkSizeIn;
-            bytesToGo -= chunkSizeIn;
-        }
-
-        while(availableXfers.size() > 0)
-        {
-            size_t chunkSizeOut = std::min((size_t)packetSizeOut * NUM_PACKETS, bytesToGo);
-
-            libusb_transfer * xfer = availableXfers.back();
-            availableXfers.pop_back();
-
-            libusb_fill_iso_transfer(xfer, hdev, epOut, dataOut, chunkSizeOut, NUM_PACKETS, transferCompleteCB, this, 1000);
-            libusb_set_iso_packet_lengths(xfer, packetSizeOut);
-            libusb_submit_transfer(xfer);
-
-            dataOut += chunkSizeOut;
-            bytesToGo -= chunkSizeOut;
-        }
-
-        int ret = libusb_handle_events(NULL);
-        check(ret, "libusb_handle_events()");
-    }
-
-    // Wait for remaining packets to be sent
-    while(availableXfers.size() != NUM_TRANSFERS)
-    {
-        int ret = libusb_handle_events(NULL);
-        check(ret, "libusb_handle_events()");
-    }
-}
-
-/**
- * Opens a device on an Android-owned USB file descriptor.
- *
- * @param fd file descriptor of the USB port the device is on
- * @returns 0 on success
- * @returns LIBUSB_ERROR_NO_MEM on memory allocation failure
- * @returns LIBUSB_ERROR_ACCESS on insufficient permissions
- * @returns LIBUSB_ERROR_BUSY if something else is using the device
- * @returns LIBUSB_ERROR_NO_DEVICE if the Device becomes disconnected
- *
- */
-int UsbDevice::openDevice(uint32_t fd) {
-    int retCode = libusb_wrap_sys_device(m_context, fd, &hdev);
-    if (retCode == 0) {
-        retCode = libusb_set_configuration(hdev, 1);
-        if (retCode < 0) {
-            libusb_close(hdev);
-            hdev = nullptr;
-            return retCode;
-        }
-        retCode = libusb_claim_interface(hdev, 1);
-        if (retCode < 0) {
-            libusb_close(hdev);
-            hdev = nullptr;
-            return retCode;
-        }
-        return libusb_reset_device(hdev);
-    }
-    return retCode;
 }
 

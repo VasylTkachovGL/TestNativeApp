@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.*
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import android.widget.Toast
 import com.example.testnativeapp.audiorecorder.AudioRecorder
@@ -64,7 +65,8 @@ class UsbActivity : Activity() {
 
         startReadButton.setOnClickListener {
             usbDeviceConnection?.let { connection ->
-                App.core?.init(connection.fileDescriptor)
+                val filePath = getExternalFilesDir(Environment.DIRECTORY_MUSIC)?.absolutePath + "/irig_sample.pcm"
+                App.core?.init(connection.fileDescriptor, filePath)
             }
 //            if (audioRecorder?.isRecording == false) {
 //                recordAudio()
@@ -77,10 +79,6 @@ class UsbActivity : Activity() {
 
         audioRecorder = AudioRecorder(object : AudioRecorder.Listener {
             override fun onDataReceived(bytes: ByteArray?) {
-                // Here we got data from audio recorder
-                bytes?.asSequence()?.chunked(64)?.forEach {
-                    writeDataAsync(it.toByteArray())
-                }
             }
         })
 

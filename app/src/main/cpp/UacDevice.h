@@ -16,7 +16,6 @@ public:
         Input
     };
 
-    UacDevice();
     UacDevice(jint fd);
     ~UacDevice();
 

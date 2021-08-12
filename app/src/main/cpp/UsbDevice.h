@@ -17,7 +17,6 @@ public:
     UsbDevice(jint fd);
     ~UsbDevice();
 
-    int openDevice(uint32_t fd);
     void openInterface(uint8_t interface);
     void setAltsetting(uint8_t interface, uint8_t altsetting);
 
@@ -37,7 +36,6 @@ protected:
     virtual void handleTransferCompleteCB(libusb_transfer * xfer);
 
 private:
-    libusb_context *m_context;
     libusb_device_handle * hdev;
 };
 

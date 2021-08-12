@@ -7,8 +7,8 @@ static const uint8_t AUDIO_CONTROL_INTERFACE = 0; // TODO: Should be taken from 
 static const uint8_t AUDIO_OUTPUT_INTERFACE = 1; // TODO: Should be taken from the descriptor
 static const uint8_t AUDIO_INPUT_INTERFACE = 2; // TODO: Should be taken from the descriptor
 
-static const uint8_t AUDIO_OUTPUT_STREAMING_EP = 0x82; // TODO: Should be taken from the descriptor
-static const uint8_t AUDIO_INPUT_STREAMING_EP = 0x01; // TODO: Should be taken from the descriptor
+static const uint8_t AUDIO_OUTPUT_STREAMING_EP = 0x01; // TODO: Should be taken from the descriptor
+static const uint8_t AUDIO_INPUT_STREAMING_EP = 0x82; // TODO: Should be taken from the descriptor
 
 static const uint8_t AUDIO_OUTPUT_CTRL_UNIT = 0x02U; // TODO: Should be taken from the descriptor
 static const uint8_t AUDIO_INPUT_CTRL_UNIT = 0x06U; // TODO: Should be taken from the descriptor
@@ -29,8 +29,8 @@ static const uint8_t AUDIO_CONTROL_SELECTOR_VOLUME = 0x02U;
 
 static const uint8_t SAMPLING_FREQ_CONTROL = 0x01U;
 
-static const uint16_t OUTPUT_PACKET_SIZE = (44100 / 1000) * sizeof(uint16_t) * 2; // 1 ms of audio at 48kHz rate, 2 bytes per sample, 2 channels
-static const uint16_t INPUT_PACKET_SIZE = (44100 / 1000) * 3 ; // 1 ms of audio at 48kHz rate, 3 bytes per sample (even for 16bit sample size), 1 channel
+static const uint16_t OUTPUT_PACKET_SIZE = (44000 / 1000) * 2 * 2; // 1 ms of audio at 44.1kHz rate, 2 bytes per sample, 2 channels
+static const uint16_t INPUT_PACKET_SIZE = (44000 / 1000) * 3 * 2 ; // 1 ms of audio at 44.1kHz rate, 3 bytes per sample, 2 channels
 
 UacDevice::UacDevice(jint fd)
     : device(fd)
@@ -55,7 +55,7 @@ void UacDevice::prepareAudioOutput()
 
 void UacDevice::prepareAudioInput()
 {
-    // Select interface configuration with 16bit sample size
+    // Select interface configuration with 24bit sample size
     device.setAltsetting(AUDIO_INPUT_INTERFACE, SAMPLE_SIZE_24BIT_ALTSETTING);
 }
 
@@ -89,8 +89,8 @@ int UacDevice::getControlValue(uint8_t reqType, Channel channel, uint8_t control
     int32_t res = 0;
 
     device.getControlAttr(false, // Interface
-        reqType, 
-        control << 8, // target control 
+        reqType,
+        control << 8, // target control
         getCtrlUnitForChannel(channel) << 8 | AUDIO_CONTROL_INTERFACE,
         std::min(valueSize, (uint16_t)sizeof(res)),
         (unsigned char*)&res
@@ -102,8 +102,8 @@ int UacDevice::getControlValue(uint8_t reqType, Channel channel, uint8_t control
 void UacDevice::setControlValue(uint8_t reqType, Channel channel, uint8_t control, int value, uint16_t valueSize)
 {
     device.setControlAttr(false, // Interface
-        reqType, 
-        control << 8, // target control 
+        reqType,
+        control << 8, // target control
         getCtrlUnitForChannel(channel) << 8 | AUDIO_CONTROL_INTERFACE,
         std::min(valueSize, (uint16_t)sizeof(int)),
         (unsigned char*)&value
