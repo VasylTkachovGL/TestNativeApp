@@ -63,19 +63,17 @@ class UsbActivity : Activity() {
         setContentView(R.layout.activity_usb)
         checkConnectedDevices()
 
-        startReadButton.setOnClickListener {
+        loopbackButton.setOnClickListener {
             usbDeviceConnection?.let { connection ->
-                val filePath = getExternalFilesDir(Environment.DIRECTORY_MUSIC)?.absolutePath + "/data.pcm"
-                //App.core?.playFile(connection.fileDescriptor, filePath)
                 App.core?.startLoopback(connection.fileDescriptor)
             }
-//            if (audioRecorder?.isRecording == false) {
-//                recordAudio()
-//                startReadButton.text = "Stop recording"
-//            } else {
-//                stopRecordingAudio()
-//                startReadButton.text = "Start recording"
-//            }
+        }
+
+        playButton.setOnClickListener {
+            usbDeviceConnection?.let { connection ->
+                val filePath = getExternalFilesDir(Environment.DIRECTORY_MUSIC)?.absolutePath + "/data.pcm"
+                App.core?.playFile(connection.fileDescriptor, filePath)
+            }
         }
 
         audioRecorder = AudioRecorder(object : AudioRecorder.Listener {
@@ -130,12 +128,14 @@ class UsbActivity : Activity() {
         } else {
             requestUsbPermission(device)
         }
-        startReadButton.isEnabled = true
+        playButton.isEnabled = true
+        loopbackButton.isEnabled = true
     }
 
     private fun onDeviceDetached() {
         closeConnection()
-        startReadButton.isEnabled = false
+        playButton.isEnabled = false
+        loopbackButton.isEnabled = false
     }
 
     private fun checkConnectedDevices() {

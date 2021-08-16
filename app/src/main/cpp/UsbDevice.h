@@ -5,6 +5,7 @@
 #include <vector>
 #include <libusb.h>
 #include <jni.h>
+#include <thread>
 
 struct libusb_device_handle;
 struct libusb_transfer;
@@ -48,6 +49,8 @@ protected:
     virtual void handleLoopbackPacketReceive(libusb_transfer * xfer);
     static void loopbackPacketSendCB(libusb_transfer * xfer);
     virtual void handleLoopbackPacketSend(libusb_transfer * xfer);
+
+    std::thread thread;
 };
 
 #endif //_USB_DEVICE_H

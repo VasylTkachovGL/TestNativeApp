@@ -39,13 +39,25 @@
         app:layout_constraintVertical_bias="0.5" />
 
     <androidx.appcompat.widget.AppCompatButton
-        android:id="@+id/startReadButton"
+        android:id="@+id/playButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:enabled="false"
         android:backgroundTint="@color/colorAccent"
-        android:text="Start recording"
+        android:text="Play file"
+        app:layout_constraintBottom_toTopOf="@id/loopbackButton"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/loopbackButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:enabled="false"
+        android:backgroundTint="@color/colorAccent"
+        android:text="Start loopback"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent" />

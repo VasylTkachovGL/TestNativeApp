@@ -41,7 +41,7 @@ Java_com_example_testnativeapp_Core_playFile(JNIEnv *env, jobject thiz, jint fd,
     device.setChannelSampleRate(UacDevice::Output, RATE);
 
     FILE *pcm = fopen(filePathString, "rb");
-    check(pcm != NULL, "fopen() pcm file");
+    check(pcm != nullptr, "fopen() pcm file");
     fseek(pcm, 0, SEEK_END);
     long size = ftell(pcm);
     check(pcm != 0, "PCM file is empty");
@@ -81,7 +81,7 @@ Java_com_example_testnativeapp_Core_recordFile(JNIEnv *env, jobject thiz, jint f
     LOG_D(TAG, "File path: %s", filePathString);
 
     FILE *pcm = fopen(filePathString, "w+b");
-    check(pcm != NULL, "fopen() pcm file");
+    check(pcm != nullptr, "fopen() pcm file");
     fwrite(pcmData.get(), 1, size, pcm);
     fclose(pcm);
     LOG_D(TAG, "File saved");
@@ -101,7 +101,7 @@ Java_com_example_testnativeapp_Core_getExternalStoragePath(
 
     jclass fileClass = env->FindClass("java/io/File");
     jmethodID getPathMethod = env->GetMethodID(fileClass, "getPath", "()Ljava/lang/String;");
-    jstring extStoragePath = (jstring) env->CallObjectMethod(extStorageFile, getPathMethod);
+    auto extStoragePath = (jstring) env->CallObjectMethod(extStorageFile, getPathMethod);
     const char *extStoragePathString = env->GetStringUTFChars(extStoragePath, nullptr);
     env->ReleaseStringUTFChars(extStoragePath, extStoragePathString);
 
