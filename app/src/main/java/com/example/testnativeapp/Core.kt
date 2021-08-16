@@ -6,11 +6,13 @@ package com.example.testnativeapp
 */
 class Core {
 
+    external fun startLoopback(fileDescriptor: Int)
+
+    external fun playFile(fileDescriptor: Int, filePath: String)
+
+    external fun recordFile(fileDescriptor: Int, filePath: String)
+
     external fun getExternalStoragePath(): String
-
-    external fun recordData(bytes: ByteArray)
-
-    external fun init(fileDescriptor: Int, filePath: String) : Boolean
 
     companion object {
         // Used to load the 'native-libs' library on application startup.

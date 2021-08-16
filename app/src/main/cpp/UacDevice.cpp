@@ -167,7 +167,7 @@ void UacDevice::recordPCM(unsigned char * data, size_t size)
                            INPUT_PACKET_SIZE);
 }
 
-void UacDevice::loopback(unsigned char * data, unsigned char * dataOut, size_t size)
+void UacDevice::loopback()
 {
-    device.loopback(AUDIO_INPUT_STREAMING_EP, AUDIO_OUTPUT_STREAMING_EP, data, dataOut, size, INPUT_PACKET_SIZE, OUTPUT_PACKET_SIZE);
+    device.loopback(AUDIO_INPUT_STREAMING_EP, INPUT_PACKET_SIZE, AUDIO_OUTPUT_STREAMING_EP, OUTPUT_PACKET_SIZE);
 }

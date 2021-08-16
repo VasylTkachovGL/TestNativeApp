@@ -65,8 +65,9 @@ class UsbActivity : Activity() {
 
         startReadButton.setOnClickListener {
             usbDeviceConnection?.let { connection ->
-                val filePath = getExternalFilesDir(Environment.DIRECTORY_MUSIC)?.absolutePath + "/irig_sample.pcm"
-                App.core?.init(connection.fileDescriptor, filePath)
+                val filePath = getExternalFilesDir(Environment.DIRECTORY_MUSIC)?.absolutePath + "/data.pcm"
+                //App.core?.playFile(connection.fileDescriptor, filePath)
+                App.core?.startLoopback(connection.fileDescriptor)
             }
 //            if (audioRecorder?.isRecording == false) {
 //                recordAudio()
