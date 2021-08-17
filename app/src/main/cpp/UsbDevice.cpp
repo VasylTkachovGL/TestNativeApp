@@ -7,7 +7,7 @@
 #include <jni.h>
 
 #define TAG "UsbDevice"
-static const size_t NUM_TRANSFERS = 2;
+static const size_t NUM_TRANSFERS = 10;
 static const uint8_t NUM_PACKETS = 1;
 
 UsbDevice::UsbDevice(jint fd) {
@@ -51,6 +51,11 @@ UsbDevice::~UsbDevice() {
 
     for (uint8_t *buf : buffers)
         delete[] buf;
+
+//    if (loopbackThread != nullptr && loopbackThread->joinable()) {
+        loopbackThread->join();
+        delete loopbackThread;
+//    }
 
     libusb_close(hdev);
     libusb_exit(nullptr);
@@ -134,7 +139,8 @@ void UsbDevice::sendIsoData(uint8_t ep, unsigned char *data, size_t size, uint16
 //    timeval timeout = {1, 0};
 //    while (availableXfers.size() != NUM_TRANSFERS) {
 //        LOG_D(TAG, "Handle events for available packets");
-//        int ret = libusb_handle_events_timeout(nullptr, &timeout);
+//        int ret = libusb_handle_events(nullptr);
+//        //int ret = libusb_handle_events_timeout(nullptr, &timeout);
 //        check(ret, "libusb_handle_events()");
 //    }
 }
@@ -170,88 +176,119 @@ void UsbDevice::receiveIsoData(uint8_t ep, unsigned char *data, size_t size, uin
     }
 }
 
-void UsbDevice::loopback(uint8_t inEp, uint16_t inPacketSize, uint8_t ep, uint16_t packetSize) {
-    this->outEp = ep;
-    this->outPacketSize = packetSize;
+void UsbDevice::loopback(uint8_t inEp, uint16_t inPacketSize, uint8_t outEp, uint16_t outPacketSize)
+{
+    this->inEp = inEp;
+    this->inPacketSize = inPacketSize;
+    this->outEp = outEp;
+    this->outPacketSize = outPacketSize;
 
-    while (true) {
+    auto loopbackFunc = [this]() {this->loopbackEventLoop();};
+    loopbackThread = new std::thread(loopbackFunc);
+}
+
+void UsbDevice::loopbackEventLoop()
+{
+    while(true)
+    {
         // Schedule as many packet transfers as possible
-        while (availableXfers.size() > 0) {
+        while(availableXfers.size() > 0)
+        {
             size_t chunkSize = inPacketSize * NUM_PACKETS;
 
-            libusb_transfer *xfer = availableXfers.back();
+            libusb_transfer * xfer = availableXfers.back();
             availableXfers.pop_back();
 
-            uint8_t *buf = buffers.back();
+            uint8_t * buf = buffers.back();
             buffers.pop_back();
 
             libusb_fill_iso_transfer(xfer, hdev, inEp, buf, chunkSize, NUM_PACKETS, loopbackPacketReceiveCB, this, 1000);
             libusb_set_iso_packet_lengths(xfer, inPacketSize);
+            LOG_D(TAG, "Запуск приема пакета");
             libusb_submit_transfer(xfer);
         }
 
-        int ret = libusb_handle_events(nullptr);
-        check(ret, "loopback: libusb_handle_events()");
+        int ret = libusb_handle_events(NULL);
+        check(ret, "libusb_handle_events()");
     }
 }
 
-void UsbDevice::loopbackPacketReceiveCB(libusb_transfer *xfer) {
-    auto *device = static_cast<UsbDevice *>(xfer->user_data);
+void UsbDevice::loopbackPacketReceiveCB(libusb_transfer * xfer)
+{
+    UsbDevice * device = static_cast<UsbDevice*>(xfer->user_data);
     device->handleLoopbackPacketReceive(xfer);
 }
 
-void UsbDevice::handleLoopbackPacketReceive(libusb_transfer *xfer) {
+void UsbDevice::handleLoopbackPacketReceive(libusb_transfer * xfer)
+{
     // Skip this transfer if there is no output transfers available
-    if (buffers.size() == 0 || availableOutXfers.size() == 0) {
-        // return input transfer and its buffer to the pool
+    if(buffers.size() == 0 || availableOutXfers.size() == 0)
+    {
+        LOG_D(TAG, "Skip this transfer: buffers=%d OutXfers=%d", buffers.size(), availableOutXfers.size());
+    // return input transfer and its buffer to the pool
         buffers.push_back(xfer->buffer);
         availableXfers.push_back(xfer);
         return;
     }
 
-    static int packetNumber = 0;
-
-    // Convert 24bit mono to 16bit stereo
-    uint8_t *inputBuf = xfer->buffer;
-    uint8_t *outputBuf = buffers.back();
+    // Prepare output buffer and transfer
+    LOG_D(TAG, "Подтверждение приема пакета");
+    uint8_t * outputBuf = buffers.back();
     buffers.pop_back();
+    libusb_transfer * outXfer = availableOutXfers.back();
+    availableOutXfers.pop_back();
 
-    bool dim = (packetNumber++ & 256);
+    libusb_fill_iso_transfer(outXfer, hdev, outEp, outputBuf, 0, NUM_PACKETS, loopbackPacketSendCB, this, 1000);
 
-    uint16_t inputLen = xfer->iso_packet_desc[0].actual_length;
-    uint16_t outputLen = 0;
-    for (int i = 0; i < inputLen / 3; i++) {
-        int16_t v = *(int16_t *) (inputBuf + i * 3 + 1);
+    // Iterate over the packets and Convert 24bit mono to 16bit stereo
+    int totalOutputLen = 0;
+    for(int p = 0; p < xfer->num_iso_packets; p++)
+    {
+        uint8_t * inputBuf = libusb_get_iso_packet_buffer(xfer, p);
+        int inputLen = xfer->iso_packet_desc[p].actual_length;
+        int outputLen = 0;
+        for(int i=0; i<inputLen/3; i++)
+        {
+            int16_t v = *(int16_t *)(inputBuf + i*3 + 1);
 
-//        if(dim)
-//            v /= 2;
+            *(int16_t *)(outputBuf + totalOutputLen + i*4) = v;
+            *(int16_t *)(outputBuf + totalOutputLen + i*4 + 2) = v;
+            outputLen += 4;
+        }
+//        for(int i=0; i<inputLen/3; i++)
+//        {
+//            int16_t v = *(int16_t *)(inputBuf + i*3 + 1);
+//
+//            *(int16_t *)(outputBuf + totalOutputLen + i*2) = v;
+//            outputLen += 2;
+//        }
 
-        *(int16_t *) (outputBuf + i * 4) = v;
-        *(int16_t *) (outputBuf + i * 4 + 2) = v;
-        outputLen += 4;
+        outXfer->iso_packet_desc[p].length = outputLen;
+
+        totalOutputLen += outputLen;
     }
+
+    outXfer->length = totalOutputLen;
 
 
     // return input transfer and its buffer to the pool
-    buffers.push_back(inputBuf);
+    buffers.push_back(xfer->buffer);
     availableXfers.push_back(xfer);
 
     // Schedule output transfer
-    libusb_transfer *outXfer = availableOutXfers.back();
-    availableOutXfers.pop_back();
-
-    // size_t chunkSize = outPacketSize * NUM_PACKETS;
-    libusb_fill_iso_transfer(outXfer, hdev, outEp, outputBuf, outputLen, NUM_PACKETS, loopbackPacketSendCB, this, 1000);
-    libusb_set_iso_packet_lengths(outXfer, outputLen /*outPacketSize*/);
     libusb_submit_transfer(outXfer);
+    LOG_D(TAG, "Отправка пакета");
 }
 
-void UsbDevice::loopbackPacketSendCB(libusb_transfer *xfer) {
-    auto *device = static_cast<UsbDevice *>(xfer->user_data);
+void UsbDevice::loopbackPacketSendCB(libusb_transfer * xfer)
+{
+    UsbDevice * device = static_cast<UsbDevice*>(xfer->user_data);
     device->handleLoopbackPacketSend(xfer);
 }
 
-void UsbDevice::handleLoopbackPacketSend(libusb_transfer *xfer) {
+void UsbDevice::handleLoopbackPacketSend(libusb_transfer * xfer)
+{
+    LOG_D(TAG, "Подтверждение отправки пакета");
     //return output transfer and its buffer to the pool
     buffers.push_back(xfer->buffer);
     availableOutXfers.push_back(xfer);

@@ -18,8 +18,11 @@ class UsbDevice
     std::vector<libusb_transfer *>  availableOutXfers;
     std::vector<uint8_t *> buffers;
 
+    uint8_t inEp;
     uint8_t outEp;
+    uint16_t inPacketSize;
     uint16_t outPacketSize;
+    std::thread * loopbackThread;
 
 public:
     UsbDevice(jint fd);
@@ -42,6 +45,8 @@ public:
 
 
 protected:
+    virtual void loopbackEventLoop();
+
     static void transferCompleteCB(libusb_transfer * xfer);
     virtual void handleTransferCompleteCB(libusb_transfer * xfer);
 

@@ -14,7 +14,6 @@ static const uint8_t AUDIO_OUTPUT_CTRL_UNIT = 0x02U; // TODO: Should be taken fr
 static const uint8_t AUDIO_INPUT_CTRL_UNIT = 0x06U; // TODO: Should be taken from the descriptor
 
 static const uint8_t SAMPLE_SIZE_16BIT_ALTSETTING = 1; // TODO: Should be taken from the descriptor
-static const uint8_t SAMPLE_SIZE_24BIT_ALTSETTING = 1; // TODO: Should be taken from the descriptor
 
 static const uint8_t AUDIO_REQ_GET_CUR = 0x81U;
 static const uint8_t AUDIO_REQ_GET_MIN = 0x82U;
@@ -29,8 +28,8 @@ static const uint8_t AUDIO_CONTROL_SELECTOR_VOLUME = 0x02U;
 
 static const uint8_t SAMPLING_FREQ_CONTROL = 0x01U;
 
-static const uint16_t OUTPUT_PACKET_SIZE = (44000 / 1000) * 2 * 2; // 1 ms of audio at 44.1kHz rate, 2 bytes per sample, 2 channels
-static const uint16_t INPUT_PACKET_SIZE = (44000 / 1000) * 3 * 2 ; // 1 ms of audio at 44.1kHz rate, 3 bytes per sample, 2 channels
+static const uint16_t OUTPUT_PACKET_SIZE = (44100 / 1000) * 2 * 2; // 1 ms of audio at 44.1kHz rate, 2 bytes per sample, 2 channels
+static const uint16_t INPUT_PACKET_SIZE = (44100 / 1000) * 3 * 2 ; // 1 ms of audio at 44.1kHz rate, 3 bytes per sample, 2 channels
 
 UacDevice::UacDevice(jint fd)
     : device(fd)
@@ -56,7 +55,7 @@ void UacDevice::prepareAudioOutput()
 void UacDevice::prepareAudioInput()
 {
     // Select interface configuration with 24bit sample size
-    device.setAltsetting(AUDIO_INPUT_INTERFACE, SAMPLE_SIZE_24BIT_ALTSETTING);
+    device.setAltsetting(AUDIO_INPUT_INTERFACE, SAMPLE_SIZE_16BIT_ALTSETTING);
 }
 
 void UacDevice::setChannelVolume(Channel channel, int volume)
@@ -170,4 +169,9 @@ void UacDevice::recordPCM(unsigned char * data, size_t size)
 void UacDevice::loopback()
 {
     device.loopback(AUDIO_INPUT_STREAMING_EP, INPUT_PACKET_SIZE, AUDIO_OUTPUT_STREAMING_EP, OUTPUT_PACKET_SIZE);
+}
+
+void UacDevice::loopback(uint16_t inpPacketSize, uint16_t outPacketSize)
+{
+    device.loopback(AUDIO_INPUT_STREAMING_EP, inpPacketSize, AUDIO_OUTPUT_STREAMING_EP, outPacketSize);
 }

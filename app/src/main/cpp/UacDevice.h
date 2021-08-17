@@ -35,6 +35,7 @@ public:
     void playPCM(unsigned char * data, size_t size);
     void recordPCM(unsigned char * data, size_t size);
     void loopback();
+    void loopback(uint16_t inpPacketSize, uint16_t outPacketSize);
 
 private:
     int getControlValue(uint8_t reqType, Channel channel, uint8_t control, uint16_t valueSize);
