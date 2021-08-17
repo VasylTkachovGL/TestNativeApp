@@ -10,6 +10,7 @@ import android.hardware.usb.*
 import android.os.Bundle
 import android.os.Environment
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import com.example.testnativeapp.audiorecorder.AudioRecorder
 import com.example.testnativeapp.audiorecorder.ReadTaskFactory
@@ -65,13 +66,22 @@ class UsbActivity : Activity() {
 
         loopbackButton.setOnClickListener {
             usbDeviceConnection?.let { connection ->
-                App.core?.startLoopback(connection.fileDescriptor)
+                val inFrequency = inFreqEditView.getIntValue()
+                val inBytesPerSample = inBytesPerSampleEditView.getIntValue()
+                val inChannels = inChannelsEditView.getIntValue()
+                val outFrequency = outFreqEditView.getIntValue()
+                val outBytesPerSample = outBytesPerSampleEditView.getIntValue()
+                val outChannels = outChannelsEditView.getIntValue()
+                App.core?.startLoopback(connection.fileDescriptor, inFrequency, inBytesPerSample,
+                    inChannels, outFrequency, outBytesPerSample, outChannels)
             }
         }
 
+        playButton.visibility = View.GONE
         playButton.setOnClickListener {
             usbDeviceConnection?.let { connection ->
-                val filePath = getExternalFilesDir(Environment.DIRECTORY_MUSIC)?.absolutePath + "/data.pcm"
+                val filePath =
+                    getExternalFilesDir(Environment.DIRECTORY_MUSIC)?.absolutePath + "/data.pcm"
                 App.core?.playFile(connection.fileDescriptor, filePath)
             }
         }
@@ -155,7 +165,8 @@ class UsbActivity : Activity() {
             for (interfaceIndex in 0 until usbDevice.interfaceCount) {
                 val usbInterface = usbDevice.getInterface(interfaceIndex)
                 val isClaimed = connection.claimInterface(usbInterface, true)
-                Log.d("iRig","Interface id: ${usbInterface.id} class: ${usbInterface.interfaceClass} name: ${usbInterface.name}")
+                Log.d("iRig",
+                    "Interface id: ${usbInterface.id} class: ${usbInterface.interfaceClass} name: ${usbInterface.name}")
                 if (!isClaimed) {
                     continue
                 }
@@ -167,7 +178,8 @@ class UsbActivity : Activity() {
                             UsbConstants.USB_DIR_IN -> readEndPoint = endpoint
                         }
                     }
-                    Log.d("iRig","- Endpoint type: ${endpoint.type} direction: ${endpoint.direction} maxPacketSize: ${endpoint.maxPacketSize}")
+                    Log.d("iRig",
+                        "- Endpoint type: ${endpoint.type} direction: ${endpoint.direction} maxPacketSize: ${endpoint.maxPacketSize}")
                 }
                 usbDataInterface = usbInterface
             }

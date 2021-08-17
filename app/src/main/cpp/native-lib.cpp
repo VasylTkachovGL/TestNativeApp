@@ -12,19 +12,21 @@ static const uint16_t RATE = 44100;
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_testnativeapp_Core_startLoopback(JNIEnv *env, jobject thiz, jint fd) {
+Java_com_example_testnativeapp_Core_startLoopback(JNIEnv *env, jobject thiz, jint fd, jint inFrequency, jint inBytesPerSample, jint inChannels, jint outFrequency, jint outBytesPerSample, jint outChannels) {
     LOG_D(TAG, "Init. File descriptor: %d", fd);
     UacDevice device(fd);
     device.prepareAudioOutput();
     device.prepareAudioInput();
+    device.setChannelSampleRate(UacDevice::Output, outFrequency);
+    device.setChannelSampleRate(UacDevice::Input, inFrequency);
 
-    device.setChannelSampleRate(UacDevice::Output, RATE);
-    LOG_D(TAG, "Output Sample Rate: %d\n", device.getChannelSampleRate(UacDevice::Output));
+    uint16_t inPacketSize = (inFrequency / 1000) * inBytesPerSample * inChannels;
+    uint16_t outPacketSize = (outFrequency / 1000) * outBytesPerSample * outChannels;
+    LOG_D(TAG, "Loopback with packet sizes: input=%d, output=%d", inPacketSize, outPacketSize);
 
-    device.setChannelSampleRate(UacDevice::Input, RATE);
-    LOG_D(TAG, "Input Sample Rate: %d\n", device.getChannelSampleRate(UacDevice::Input));
-
-    device.loopback();
+    device.loopback(inPacketSize, outPacketSize);
+    while(true)
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 }
 
 extern "C"

@@ -204,7 +204,6 @@ void UsbDevice::loopbackEventLoop()
 
             libusb_fill_iso_transfer(xfer, hdev, inEp, buf, chunkSize, NUM_PACKETS, loopbackPacketReceiveCB, this, 1000);
             libusb_set_iso_packet_lengths(xfer, inPacketSize);
-            LOG_D(TAG, "Запуск приема пакета");
             libusb_submit_transfer(xfer);
         }
 
@@ -224,7 +223,6 @@ void UsbDevice::handleLoopbackPacketReceive(libusb_transfer * xfer)
     // Skip this transfer if there is no output transfers available
     if(buffers.size() == 0 || availableOutXfers.size() == 0)
     {
-        LOG_D(TAG, "Skip this transfer: buffers=%d OutXfers=%d", buffers.size(), availableOutXfers.size());
     // return input transfer and its buffer to the pool
         buffers.push_back(xfer->buffer);
         availableXfers.push_back(xfer);
@@ -232,7 +230,6 @@ void UsbDevice::handleLoopbackPacketReceive(libusb_transfer * xfer)
     }
 
     // Prepare output buffer and transfer
-    LOG_D(TAG, "Подтверждение приема пакета");
     uint8_t * outputBuf = buffers.back();
     buffers.pop_back();
     libusb_transfer * outXfer = availableOutXfers.back();
@@ -277,7 +274,6 @@ void UsbDevice::handleLoopbackPacketReceive(libusb_transfer * xfer)
 
     // Schedule output transfer
     libusb_submit_transfer(outXfer);
-    LOG_D(TAG, "Отправка пакета");
 }
 
 void UsbDevice::loopbackPacketSendCB(libusb_transfer * xfer)
@@ -288,7 +284,6 @@ void UsbDevice::loopbackPacketSendCB(libusb_transfer * xfer)
 
 void UsbDevice::handleLoopbackPacketSend(libusb_transfer * xfer)
 {
-    LOG_D(TAG, "Подтверждение отправки пакета");
     //return output transfer and its buffer to the pool
     buffers.push_back(xfer->buffer);
     availableOutXfers.push_back(xfer);
