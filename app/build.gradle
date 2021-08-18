@@ -33,6 +33,15 @@ android {
         }
     }
     ndkVersion '22.1.7171670'
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            def builtType = variant.buildType.name
+            def versionName = variant.versionName
+            def versionCode = variant.versionCode
+            outputFileName = "tone-native-${builtType}-${versionName}-${versionCode}.apk"
+        }
+    }
 }
 
 dependencies {
