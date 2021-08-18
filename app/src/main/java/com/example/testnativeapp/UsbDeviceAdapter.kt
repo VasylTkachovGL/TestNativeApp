@@ -5,8 +5,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import java.util.*
+
+import androidx.recyclerview.widget.AsyncListDiffer
+
 
 /*
 * @author Tkachov Vasyl
@@ -15,14 +19,19 @@ import java.util.*
 class UsbDeviceAdapter(private val clickListener: UsbDeviceListClickListener) :
     RecyclerView.Adapter<UsbDeviceAdapter.UsbDeviceViewHolder>() {
 
-    private val usbDevices = ArrayList<UsbDevice>()
+    private val diffCallback = object : DiffUtil.ItemCallback<UsbDevice>() {
+        override fun areItemsTheSame(old: UsbDevice, new: UsbDevice): Boolean {
+            return old.deviceId == new.deviceId
+        }
+
+        override fun areContentsTheSame(old: UsbDevice, new: UsbDevice): Boolean {
+            return old == new
+        }
+    }
+    private val differ: AsyncListDiffer<UsbDevice> = AsyncListDiffer(this, diffCallback)
 
     interface UsbDeviceListClickListener {
         fun onDeviceClicked(usbDevice: UsbDevice)
-    }
-
-    init {
-        setHasStableIds(true)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UsbDeviceViewHolder {
@@ -32,25 +41,15 @@ class UsbDeviceAdapter(private val clickListener: UsbDeviceListClickListener) :
     }
 
     override fun onBindViewHolder(holder: UsbDeviceViewHolder, position: Int) {
-        holder.onBind(usbDevices[position])
+        holder.onBind(differ.currentList[position])
     }
 
     override fun getItemCount(): Int {
-        return usbDevices.size
+        return differ.currentList.size
     }
 
-    override fun getItemId(position: Int): Long {
-        return usbDevices[position].deviceId.toLong()
-    }
-
-    fun clearUsbDevices() {
-        usbDevices.clear()
-        notifyItemRangeRemoved(0, usbDevices.size)
-    }
-
-    fun addUsbDevices(devices: MutableCollection<UsbDevice>) {
-        usbDevices.addAll(devices)
-        notifyItemRangeInserted(0, usbDevices.size)
+    fun addUsbDevices(devices: MutableList<UsbDevice>) {
+        differ.submitList(devices)
     }
 
     inner class UsbDeviceViewHolder internal constructor(itemView: View) :

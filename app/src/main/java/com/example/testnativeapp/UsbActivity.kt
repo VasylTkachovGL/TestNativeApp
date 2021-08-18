@@ -101,12 +101,14 @@ class UsbActivity : Activity() {
                 when (action) {
                     UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
                         Log.d(TAG, "ACTION_USB_DEVICE_ATTACHED")
-                        refreshDeviceList()
                         //onDeviceAttached(device)
+                        refreshDeviceList()
                     }
                     UsbManager.ACTION_USB_DEVICE_DETACHED -> {
                         Log.d(TAG, "ACTION_USB_DEVICE_DETACHED")
                         onDeviceDetached()
+                        refreshDeviceList()
+                        Toast.makeText(this, "USB DEVICE DETACHED", Toast.LENGTH_SHORT).show()
                     }
                 }
             } ?: finish()
@@ -128,27 +130,27 @@ class UsbActivity : Activity() {
         closeConnection()
         audioFieldsGroup.visibility = View.GONE
         deviceListGroup.visibility = View.VISIBLE
-        refreshDeviceList()
     }
 
-    private fun showDeviceList(deviceList: MutableCollection<UsbDevice>) {
-        Log.d(TAG, "showDeviceList ${deviceList.size}")
+    private fun initDeviceList() {
         adapter = UsbDeviceAdapter(object : UsbDeviceAdapter.UsbDeviceListClickListener {
             override fun onDeviceClicked(usbDevice: UsbDevice) {
                 onDeviceAttached(usbDevice)
             }
         })
-        adapter?.addUsbDevices(deviceList)
         usbDevicesView.adapter = adapter
         usbDevicesView.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
-
-        deviceListGroup.visibility = View.VISIBLE
-        usbDevicesEmptyView.visibility = if (deviceList.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun refreshDeviceList() {
-        adapter?.clearUsbDevices()
-        showDeviceList(usbManager.deviceList.values)
+        if (adapter == null) {
+            initDeviceList()
+        }
+        val deviceList = usbManager.deviceList.values
+        Log.d(TAG, "refreshDeviceList ${deviceList.size}")
+
+        adapter?.addUsbDevices(deviceList.toMutableList())
+        usbDevicesEmptyView.visibility = if (deviceList.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun openUsbDevice(usbDevice: UsbDevice) {
@@ -182,6 +184,7 @@ class UsbActivity : Activity() {
     }
 
     private fun requestUsbPermission(usbDevice: UsbDevice) {
+        Log.d(TAG, "requestUsbPermission")
         val permissionIntent = PendingIntent.getBroadcast(this, 0, Intent(ACTION_USB_PERMISSION), 0)
         usbPermissionReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
@@ -195,7 +198,7 @@ class UsbActivity : Activity() {
                 if (permissionGranted) {
                     device?.let { openUsbDevice(it) }
                 } else {
-                    Toast.makeText(context, "Permission denied: $device", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Permission denied: ${device?.manufacturerName}", Toast.LENGTH_LONG).show()
                 }
             }
         }
