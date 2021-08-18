@@ -21,13 +21,17 @@ class MainActivity : AppCompatActivity() {
         checkPermissions()
     }
 
+    private fun showUsbActivity() {
+        startActivity(Intent(this, UsbActivity::class.java))
+        finish()
+    }
+
     private fun checkPermissions() {
         if (ContextCompat.checkSelfPermission(this,
                 Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             requestPermission()
         } else {
-            startActivity(Intent(this, UsbActivity::class.java))
-            finish()
+            showUsbActivity()
         }
     }
 
@@ -50,6 +54,7 @@ class MainActivity : AppCompatActivity() {
     private val resultLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         when {
             granted -> {
+                showUsbActivity()
                 return@registerForActivityResult
             }
             !shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO) -> {
