@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.activity_usb.*
 import kotlinx.coroutines.*
 import java.io.File
+import java.util.*
 
 /*
  * @author Tkachov Vasyl
@@ -36,13 +37,13 @@ class UsbActivity : Activity() {
     private var deviceStatusReceiver: BroadcastReceiver? = null
     private var isRecording = false
 
-    private var adapter : UsbDeviceAdapter? = null
+    private var adapter: UsbDeviceAdapter? = null
     private val audioWaveScope = CoroutineScope(Dispatchers.Main)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_usb)
-        checkConnectedDevices()
+        refreshDeviceList()
 
         loopbackButton.setOnClickListener {
             usbDeviceConnection?.let { connection ->
@@ -75,6 +76,10 @@ class UsbActivity : Activity() {
         registerReceiver(deviceStatusReceiver, IntentFilter().apply {
             addAction(UsbManager.ACTION_USB_DEVICE_DETACHED)
         })
+
+        appBuildInfoView.text =
+            String.format(Locale.getDefault(), "app version: %s(%s)", BuildConfig.VERSION_NAME,
+                BuildConfig.VERSION_CODE)
     }
 
     override fun onNewIntent(intent: Intent?) {
@@ -96,7 +101,8 @@ class UsbActivity : Activity() {
                 when (action) {
                     UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
                         Log.d(TAG, "ACTION_USB_DEVICE_ATTACHED")
-                        onDeviceAttached(device)
+                        refreshDeviceList()
+                        //onDeviceAttached(device)
                     }
                     UsbManager.ACTION_USB_DEVICE_DETACHED -> {
                         Log.d(TAG, "ACTION_USB_DEVICE_DETACHED")
@@ -122,17 +128,7 @@ class UsbActivity : Activity() {
         closeConnection()
         audioFieldsGroup.visibility = View.GONE
         deviceListGroup.visibility = View.VISIBLE
-    }
-
-    private fun checkConnectedDevices() {
-        val deviceList = usbManager.deviceList.values
-//        deviceList.iterator().asSequence().filter {
-//            it.vendorId == 6499
-//        }.firstOrNull()?.also {
-//            onDeviceAttached(it)
-//            return
-//        }
-        showDeviceList(deviceList)
+        refreshDeviceList()
     }
 
     private fun showDeviceList(deviceList: MutableCollection<UsbDevice>) {
@@ -147,9 +143,7 @@ class UsbActivity : Activity() {
         usbDevicesView.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
 
         deviceListGroup.visibility = View.VISIBLE
-        if (deviceList.isEmpty()) {
-            usbDevicesEmptyView.visibility = View.VISIBLE
-        }
+        usbDevicesEmptyView.visibility = if (deviceList.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun refreshDeviceList() {
