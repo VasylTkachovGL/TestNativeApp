@@ -12,7 +12,6 @@ import kotlinx.coroutines.isActive
 * @author Tkachov Vasyl
 * @since 10.08.2021
 */
-
 fun CoroutineScope.launchPeriodicAsync(repeatMillis: Long, action: () -> Unit) = this.async {
     if (repeatMillis > 0) {
         while (isActive) {

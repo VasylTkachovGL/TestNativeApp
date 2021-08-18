@@ -11,6 +11,8 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Toast
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.activity_usb.*
 import kotlinx.coroutines.*
 import java.io.File
@@ -34,8 +36,8 @@ class UsbActivity : Activity() {
     private var deviceStatusReceiver: BroadcastReceiver? = null
     private var isRecording = false
 
+    private var adapter : UsbDeviceAdapter? = null
     private val audioWaveScope = CoroutineScope(Dispatchers.Main)
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,11 +57,14 @@ class UsbActivity : Activity() {
             }
         }
 
-        playButton.visibility = View.GONE
         playButton.setOnClickListener {
             usbDeviceConnection?.let { connection ->
                 App.core?.playFile(connection.fileDescriptor, tmpFilePath)
             }
+        }
+
+        searchButton.setOnClickListener {
+            refreshDeviceList()
         }
 
         deviceStatusReceiver = object : BroadcastReceiver() {
@@ -108,23 +113,48 @@ class UsbActivity : Activity() {
         } else {
             requestUsbPermission(device)
         }
-        playButton.isEnabled = true
-        loopbackButton.isEnabled = true
+        audioFieldsGroup.visibility = View.VISIBLE
+        deviceListGroup.visibility = View.GONE
+        usbDevicesEmptyView.visibility = View.GONE
     }
 
     private fun onDeviceDetached() {
         closeConnection()
-        playButton.isEnabled = false
-        loopbackButton.isEnabled = false
+        audioFieldsGroup.visibility = View.GONE
+        deviceListGroup.visibility = View.VISIBLE
     }
 
     private fun checkConnectedDevices() {
-        val deviceList: MutableIterator<UsbDevice> = usbManager.deviceList.values.iterator()
-        deviceList.asSequence().filter {
-            it.vendorId == 6499
-        }.firstOrNull()?.also {
-            onDeviceAttached(it)
+        val deviceList = usbManager.deviceList.values
+//        deviceList.iterator().asSequence().filter {
+//            it.vendorId == 6499
+//        }.firstOrNull()?.also {
+//            onDeviceAttached(it)
+//            return
+//        }
+        showDeviceList(deviceList)
+    }
+
+    private fun showDeviceList(deviceList: MutableCollection<UsbDevice>) {
+        Log.d(TAG, "showDeviceList ${deviceList.size}")
+        adapter = UsbDeviceAdapter(object : UsbDeviceAdapter.UsbDeviceListClickListener {
+            override fun onDeviceClicked(usbDevice: UsbDevice) {
+                onDeviceAttached(usbDevice)
+            }
+        })
+        adapter?.addUsbDevices(deviceList)
+        usbDevicesView.adapter = adapter
+        usbDevicesView.layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, false)
+
+        deviceListGroup.visibility = View.VISIBLE
+        if (deviceList.isEmpty()) {
+            usbDevicesEmptyView.visibility = View.VISIBLE
         }
+    }
+
+    private fun refreshDeviceList() {
+        adapter?.clearUsbDevices()
+        showDeviceList(usbManager.deviceList.values)
     }
 
     private fun openUsbDevice(usbDevice: UsbDevice) {

@@ -5,7 +5,8 @@ import android.hardware.usb.UsbDevice
 /*
 * @author Tkachov Vasyl
 * @since 23.07.2021
-*/object Util {
+*/
+object Util {
 
     fun readUsbData(device: UsbDevice) {
         var returnValue = ""
