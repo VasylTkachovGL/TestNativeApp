@@ -12,5 +12,6 @@ add_library(native-lib SHARED
         UsbDevice.cpp
         UacDevice.cpp
         Utils.cpp
+        JniUtils.cpp
         native-lib.cpp)
 target_link_libraries(native-lib libusb ${log-lib})
