@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.*
 import android.os.Bundle
+import android.os.Environment
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -25,6 +26,7 @@ import java.util.*
 class UsbActivity : Activity() {
 
     private val tmpFilePath by lazy { "$externalCacheDir${File.separator}data.pcm" }
+    private val logFilePath by lazy { "$externalCacheDir${File.separator}tone-native-log.txt" }
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
     }
@@ -43,6 +45,7 @@ class UsbActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_usb)
+
         refreshDeviceList()
 
         loopbackButton.setOnClickListener {
@@ -116,6 +119,7 @@ class UsbActivity : Activity() {
     }
 
     private fun onDeviceAttached(device: UsbDevice) {
+        Log.d(TAG, "picked device ${device.vendorId}")
         if (usbManager.hasPermission(device)) {
             openUsbDevice(device)
         } else {

@@ -40,9 +40,15 @@ UsbDevice::UsbDevice(jint fd) {
         buf = new uint8_t[1024 * NUM_PACKETS];  // Size of the buffer shall correspond input and output packet sizes, multiplied by NUM_TRANSFERS
         buffers.push_back(buf);
     }
+
+    loopbackThread = nullptr;
+    transferThread = nullptr;
+    stopping = false;
 }
 
 UsbDevice::~UsbDevice() {
+    stopTransferLoop();
+
     for (libusb_transfer *xfer : availableXfers)
         libusb_free_transfer(xfer);
 
@@ -52,10 +58,10 @@ UsbDevice::~UsbDevice() {
     for (uint8_t *buf : buffers)
         delete[] buf;
 
-//    if (loopbackThread != nullptr && loopbackThread->joinable()) {
+    if (loopbackThread) {
         loopbackThread->join();
         delete loopbackThread;
-//    }
+    }
 
     libusb_close(hdev);
     libusb_exit(nullptr);
@@ -109,7 +115,34 @@ void UsbDevice::transferCompleteCB(struct libusb_transfer *xfer) {
 }
 
 void UsbDevice::handleTransferCompleteCB(libusb_transfer *xfer) {
-    availableXfers.push_back(xfer);
+//    availableXfers.push_back(xfer);
+    {
+        std::lock_guard<std::mutex> guard(queueMutex);
+        availableXfers.push_back(xfer);
+    }
+    transfer_cv.notify_one();
+}
+
+void UsbDevice::startTransferLoop()
+{
+    // Already running?
+    if(transferThread)
+        return;
+
+    stopping = false;
+    transferThread = new std::thread([this]() {this->transferEventLoop();});
+}
+
+void UsbDevice::stopTransferLoop()
+{
+    // Already stopped?
+    if(!transferThread)
+        return;
+
+    stopping = true;
+    transferThread->join();
+    delete transferThread;
+    transferThread = nullptr;
 }
 
 void UsbDevice::sendIsoData(uint8_t ep, unsigned char *data, size_t size, uint16_t packetSize) {
@@ -144,6 +177,49 @@ void UsbDevice::sendIsoData(uint8_t ep, unsigned char *data, size_t size, uint16
 //        check(ret, "libusb_handle_events()");
 //    }
 }
+
+void UsbDevice::sendIsoPacket(uint8_t ep, unsigned char * data, uint16_t size)
+{
+    {
+        TransferQueueEntry entry = {ep, data, size};
+        std::lock_guard<std::mutex> guard(queueMutex);
+        transferQueue.push_back(entry);
+    }
+    transfer_cv.notify_one();
+}
+
+void UsbDevice::transferEventLoop()
+{
+    printf("UsbDevice::transferEventLoop()\n");
+    while(true)
+    {
+        timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 100000;
+
+        int ret = libusb_handle_events_timeout(NULL, &tv);
+        check(ret, "libusb_handle_events()");
+
+        // Process pending packets, if any
+        std::unique_lock<std::mutex> guard(queueMutex);
+        while(transferQueue.size() > 0 && availableXfers.size() > 0)
+        {
+            TransferQueueEntry entry = transferQueue.back();
+            transferQueue.pop_back();
+            libusb_transfer * xfer = availableXfers.back();
+            availableXfers.pop_back();
+
+            libusb_fill_iso_transfer(xfer, hdev, entry.ep, entry.data, entry.len, NUM_PACKETS, transferCompleteCB, this, 1000);
+            libusb_set_iso_packet_lengths(xfer, entry.len);
+            libusb_submit_transfer(xfer);
+        }
+
+        if(stopping && transferQueue.size() == 0 && availableXfers.size() == NUM_TRANSFERS)
+            break;
+    }
+    printf("UsbDevice::transferEventLoop() completed\n");
+}
+
 
 void UsbDevice::receiveIsoData(uint8_t ep, unsigned char *data, size_t size, uint16_t packetSize) {
     size_t totalPackets = size / packetSize;
