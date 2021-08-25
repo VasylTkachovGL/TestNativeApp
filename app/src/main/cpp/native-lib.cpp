@@ -24,7 +24,7 @@ Java_com_example_testnativeapp_Core_startLoopback(JNIEnv *env, jobject thiz, jin
     uint16_t outPacketSize = (outFrequency / 1000) * outBytesPerSample * outChannels;
     LOG_D(TAG, "Loopback with packet sizes: input=%d, output=%d", inPacketSize, outPacketSize);
 
-    device.loopback(inPacketSize, outPacketSize);
+    device.loopback(inPacketSize, outPacketSize, inChannels);
     while(true)
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 }
