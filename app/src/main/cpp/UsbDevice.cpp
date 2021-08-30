@@ -252,10 +252,11 @@ void UsbDevice::receiveIsoData(uint8_t ep, unsigned char *data, size_t size, uin
     }
 }
 
-void UsbDevice::loopback(uint8_t inEp, uint16_t inPacketSize, uint8_t outEp, uint16_t outPacketSize)
+void UsbDevice::loopback(uint8_t inEp, uint16_t inPacketSize, int8_t inChannels, uint8_t outEp, uint16_t outPacketSize)
 {
     this->inEp = inEp;
     this->inPacketSize = inPacketSize;
+    this->inChannels = inChannels;
     this->outEp = outEp;
     this->outPacketSize = outPacketSize;
 
@@ -313,7 +314,7 @@ void UsbDevice::handleLoopbackPacketReceive(libusb_transfer * xfer)
 
     libusb_fill_iso_transfer(outXfer, hdev, outEp, outputBuf, 0, NUM_PACKETS, loopbackPacketSendCB, this, 1000);
 
-    // Iterate over the packets and Convert 24bit mono to 16bit stereo
+    // Iterate over the packets and convert 24bit to 16bit
     int totalOutputLen = 0;
     for(int p = 0; p < xfer->num_iso_packets; p++)
     {
@@ -324,17 +325,16 @@ void UsbDevice::handleLoopbackPacketReceive(libusb_transfer * xfer)
         {
             int16_t v = *(int16_t *)(inputBuf + i*3 + 1);
 
-            *(int16_t *)(outputBuf + totalOutputLen + i*4) = v;
-            *(int16_t *)(outputBuf + totalOutputLen + i*4 + 2) = v;
-            outputLen += 4;
+            // Check if input mono or stereo
+            if (inChannels == 1) {
+                *(int16_t *) (outputBuf + totalOutputLen + i * 4) = v;
+                *(int16_t *) (outputBuf + totalOutputLen + i * 4 + 2) = v;
+                outputLen += 4;
+            } else {
+                *(int16_t *)(outputBuf + totalOutputLen + i*2) = v;
+                outputLen += 2;
+            }
         }
-//        for(int i=0; i<inputLen/3; i++)
-//        {
-//            int16_t v = *(int16_t *)(inputBuf + i*3 + 1);
-//
-//            *(int16_t *)(outputBuf + totalOutputLen + i*2) = v;
-//            outputLen += 2;
-//        }
 
         outXfer->iso_packet_desc[p].length = outputLen;
 

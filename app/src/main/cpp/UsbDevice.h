@@ -26,6 +26,7 @@ class UsbDevice
     uint8_t outEp;
     uint16_t inPacketSize;
     uint16_t outPacketSize;
+    int8_t inChannels;
     std::thread * loopbackThread;
 
     struct TransferQueueEntry
@@ -61,7 +62,7 @@ public:
     void sendIsoPacket(uint8_t ep, unsigned char * data, uint16_t size);
     void receiveIsoData(uint8_t ep, unsigned char * data, size_t size, uint16_t packetSize);
 
-    void loopback(uint8_t inEp, uint16_t inPacketSize, uint8_t outEp, uint16_t outPacketSize);
+    void loopback(uint8_t inEp, uint16_t inPacketSize, int8_t inChannels, uint8_t outEp, uint16_t outPacketSize);
 
     void closeInterface(uint8_t interface);
 
