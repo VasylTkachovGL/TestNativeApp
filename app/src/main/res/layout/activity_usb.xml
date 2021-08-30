@@ -11,13 +11,15 @@
         android:layout_height="wrap_content"
         android:visibility="gone"
         app:constraint_referenced_ids="inFreqView, inChannelsView, inBytesPerSampleView,
-outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton" />
+outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton"
+        tools:visibility="visible" />
 
     <androidx.constraintlayout.widget.Group
         android:id="@+id/deviceListGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:constraint_referenced_ids="usbDevicesTitleView, usbDevicesView, searchButton" />
+        app:constraint_referenced_ids="usbDevicesTitleView, usbDevicesView, searchButton"
+        tools:visibility="gone" />
 
     <TextView
         android:id="@+id/usbDevicesTitleView"
@@ -73,11 +75,13 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton" />
         android:textStyle="bold"
         app:helperText="Input Frequency"
         app:helperTextTextColor="@color/helperText"
+        app:layout_constraintBottom_toTopOf="@+id/inBytesPerSampleView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0">
+        app:layout_constraintVertical_bias="0"
+        app:layout_constraintVertical_chainStyle="spread">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/inFreqEditView"
@@ -98,6 +102,7 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton" />
         android:textStyle="bold"
         app:helperText="Input bytes per sample"
         app:helperTextTextColor="@color/helperText"
+        app:layout_constraintBottom_toTopOf="@+id/outFreqView"
         app:layout_constraintEnd_toStartOf="@id/inChannelsView"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintHorizontal_chainStyle="packed"
@@ -146,6 +151,7 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton" />
         android:textStyle="bold"
         app:helperText="Output Frequency"
         app:helperTextTextColor="@color/helperText"
+        app:layout_constraintBottom_toTopOf="@+id/outBytesPerSampleView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintStart_toStartOf="parent"
@@ -171,11 +177,13 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton" />
         android:textStyle="bold"
         app:helperText="Output bytes per sample"
         app:helperTextTextColor="@color/helperText"
+        app:layout_constraintBottom_toTopOf="@id/descriptorsView"
         app:layout_constraintEnd_toStartOf="@id/outChannelsView"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintHorizontal_chainStyle="packed"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/outFreqView">
+        app:layout_constraintTop_toBottomOf="@+id/outFreqView"
+        app:layout_constraintVertical_bias="0">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/outBytesPerSampleEditView"
@@ -226,16 +234,36 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton" />
         app:layout_constraintTop_toBottomOf="@id/outBytesPerSampleView"
         app:layout_constraintVertical_bias="0.5" />
 
+    <TextView
+        android:id="@+id/descriptorsView"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        android:scrollbars="vertical"
+        app:layout_constraintWidth_default="wrap"
+        app:layout_constraintBottom_toTopOf="@id/loopbackButton"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/outBytesPerSampleView"
+        tools:text="hsekjghsklfh\nvfhkjlsh\nfkljashfklsj\nhafklsdj\nhjhruig\nhairueh\neirhagkjghsklfh\nvfhkjlsh\nfkljashfklsj\nhafklsdj\nhjhruig\nhairueh\neirhj\nhruig\nha" />
+
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/loopbackButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="24dp"
         android:backgroundTint="@color/colorAccent"
         android:text="Start loopback"
-        app:layout_constraintBottom_toTopOf="@id/playButton"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/descriptorsView"
+        app:layout_constraintVertical_bias="1" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/playButton"
@@ -245,11 +273,9 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton" />
         android:backgroundTint="@color/colorAccent"
         android:text="Play file"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/searchButton"
+        app:layout_constraintBottom_toTopOf="@id/appBuildInfoView"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:visibility="visible" />
+        app:layout_constraintStart_toStartOf="parent" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/searchButton"
@@ -263,8 +289,7 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton" />
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1"
-        tools:visibility="visible" />
+        app:layout_constraintVertical_bias="1" />
 
     <TextView
         android:id="@+id/appBuildInfoView"
@@ -277,6 +302,6 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton" />
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1"/>
+        app:layout_constraintVertical_bias="1" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

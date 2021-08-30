@@ -8,15 +8,18 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.usb.*
 import android.os.Bundle
-import android.os.Environment
+import android.text.method.ScrollingMovementMethod
 import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.testnativeapp.descriptors.UsbDescriptorParser
+import com.example.testnativeapp.descriptors.report.TextReportCanvas
 import kotlinx.android.synthetic.main.activity_usb.*
 import kotlinx.coroutines.*
 import java.io.File
+import java.lang.StringBuilder
 import java.util.*
 
 /*
@@ -184,6 +187,17 @@ class UsbActivity : Activity() {
             if (writeEndPoint == null || readEndPoint == null) {
                 return
             }
+
+            val parser = UsbDescriptorParser()
+            parser.parseDescriptors(connection.rawDescriptors)
+            val stringBuilder = StringBuilder()
+            val reportCanvas = TextReportCanvas(connection, stringBuilder)
+            for (descriptor in parser.descriptors) {
+                descriptor.report(reportCanvas)
+            }
+            Log.d(TAG, "$stringBuilder")
+            descriptorsView.text = stringBuilder.toString()
+            descriptorsView.movementMethod = ScrollingMovementMethod()
         }
     }
 
