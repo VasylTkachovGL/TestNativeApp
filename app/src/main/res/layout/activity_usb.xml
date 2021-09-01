@@ -10,8 +10,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        app:constraint_referenced_ids="inFreqView, inChannelsView, inBytesPerSampleView,
-outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton"
+        app:constraint_referenced_ids="freqView, descriptorsView, loopbackButton,
+        inChannelsTitleView, inChannelsView,
+        inBitsResolutionTitleView, inBitsResolutionView,
+        outChannelsTitleView, outChannelsView,
+        outBitsResolutionTitleView, outBitsResolutionView"
         tools:visibility="visible" />
 
     <androidx.constraintlayout.widget.Group
@@ -64,18 +67,18 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton"
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/inFreqView"
+        android:id="@+id/freqView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
-        android:hint="44100"
+        android:hint="0"
         android:textSize="16sp"
         android:textStyle="bold"
-        app:helperText="Input Frequency"
+        app:helperText="Frequency"
         app:helperTextTextColor="@color/helperText"
-        app:layout_constraintBottom_toTopOf="@+id/inBytesPerSampleView"
+        app:layout_constraintBottom_toTopOf="@+id/inBitsResolutionTitleView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintStart_toStartOf="parent"
@@ -84,136 +87,129 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton"
         app:layout_constraintVertical_chainStyle="spread">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/inFreqEditView"
+            android:id="@+id/freqEditView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/inBytesPerSampleView"
+    <TextView
+        android:id="@+id/inBitsResolutionTitleView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
-        android:hint="3"
+        android:text="Input bits per sample"
+        android:textColor="@color/helperText"
         android:textSize="14sp"
         android:textStyle="bold"
-        app:helperText="Input bytes per sample"
-        app:helperTextTextColor="@color/helperText"
-        app:layout_constraintBottom_toTopOf="@+id/outFreqView"
-        app:layout_constraintEnd_toStartOf="@id/inChannelsView"
+        app:layout_constraintBottom_toTopOf="@+id/inBitsResolutionView"
         app:layout_constraintHorizontal_bias="0"
-        app:layout_constraintHorizontal_chainStyle="packed"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/inFreqView">
+        app:layout_constraintTop_toBottomOf="@+id/freqView" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/inBytesPerSampleEditView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+    <TextView
+        android:id="@+id/inBitsResolutionView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="16dp"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toTopOf="@+id/outBitsResolutionTitleView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/inBitsResolutionTitleView"
+        tools:text="Value" />
 
-    </com.google.android.material.textfield.TextInputLayout>
+    <TextView
+        android:id="@+id/inChannelsTitleView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:text="Input channels"
+        android:textColor="@color/helperText"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constraintStart_toStartOf="@id/outChannelsTitleView"
+        app:layout_constraintTop_toTopOf="@+id/inBitsResolutionTitleView" />
 
-    <com.google.android.material.textfield.TextInputLayout
+    <TextView
         android:id="@+id/inChannelsView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:layout_marginEnd="16dp"
-        android:hint="2"
         android:textSize="14sp"
-        android:textStyle="bold"
-        app:helperText="Input channels"
-        app:helperTextTextColor="@color/helperText"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0"
-        app:layout_constraintStart_toEndOf="@id/inBytesPerSampleView"
-        app:layout_constraintTop_toBottomOf="@+id/inFreqView">
+        app:layout_constraintStart_toStartOf="@+id/inChannelsTitleView"
+        app:layout_constraintTop_toBottomOf="@+id/inChannelsTitleView"
+        tools:text="Value" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/inChannelsEditView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/outFreqView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        android:layout_marginEnd="16dp"
-        android:hint="44100"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        app:helperText="Output Frequency"
-        app:helperTextTextColor="@color/helperText"
-        app:layout_constraintBottom_toTopOf="@+id/outBytesPerSampleView"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/inBytesPerSampleView"
-        app:layout_constraintVertical_bias="0">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/outFreqEditView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/outBytesPerSampleView"
+    <TextView
+        android:id="@+id/outBitsResolutionTitleView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
-        android:hint="2"
+        android:text="Output bits per sample"
+        android:textColor="@color/helperText"
         android:textSize="14sp"
         android:textStyle="bold"
-        app:helperText="Output bytes per sample"
-        app:helperTextTextColor="@color/helperText"
-        app:layout_constraintBottom_toTopOf="@id/descriptorsView"
-        app:layout_constraintEnd_toStartOf="@id/outChannelsView"
+        app:layout_constraintBottom_toTopOf="@+id/outBitsResolutionView"
+        app:layout_constraintEnd_toStartOf="@id/outChannelsTitleView"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintHorizontal_chainStyle="packed"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/outFreqView"
-        app:layout_constraintVertical_bias="0">
+        app:layout_constraintTop_toBottomOf="@+id/inBitsResolutionView" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/outBytesPerSampleEditView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+    <TextView
+        android:id="@+id/outBitsResolutionView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="16dp"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toTopOf="@+id/descriptorsView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/outBitsResolutionTitleView"
+        tools:text="Value" />
 
-    </com.google.android.material.textfield.TextInputLayout>
+    <TextView
+        android:id="@+id/outChannelsTitleView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:text="Output channels"
+        android:textColor="@color/helperText"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constraintStart_toEndOf="@id/outBitsResolutionTitleView"
+        app:layout_constraintTop_toTopOf="@+id/outBitsResolutionTitleView" />
 
-    <com.google.android.material.textfield.TextInputLayout
+    <TextView
         android:id="@+id/outChannelsView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:layout_marginEnd="16dp"
-        android:hint="2"
         android:textSize="14sp"
-        android:textStyle="bold"
-        app:helperText="Output channels"
-        app:helperTextTextColor="@color/helperText"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0"
-        app:layout_constraintStart_toEndOf="@id/outBytesPerSampleView"
-        app:layout_constraintTop_toBottomOf="@+id/outFreqView">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/outChannelsEditView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-
-    </com.google.android.material.textfield.TextInputLayout>
+        app:layout_constraintStart_toStartOf="@+id/outChannelsTitleView"
+        app:layout_constraintTop_toBottomOf="@+id/outChannelsTitleView"
+        tools:text="Value" />
 
     <com.visualizer.amplitude.AudioRecordView
         android:id="@+id/audioRecordView"
@@ -231,7 +227,7 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton"
         app:layout_constraintBottom_toTopOf="@id/loopbackButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/outBytesPerSampleView"
+        app:layout_constraintTop_toBottomOf="@id/outBitsResolutionView"
         app:layout_constraintVertical_bias="0.5" />
 
     <TextView
@@ -239,15 +235,15 @@ outFreqView, outChannelsView, outBytesPerSampleView, loopbackButton"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="16dp"
         android:layout_marginEnd="16dp"
         android:scrollbars="vertical"
-        app:layout_constraintWidth_default="wrap"
         app:layout_constraintBottom_toTopOf="@id/loopbackButton"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/outBytesPerSampleView"
-        tools:text="hsekjghsklfh\nvfhkjlsh\nfkljashfklsj\nhafklsdj\nhjhruig\nhairueh\neirhagkjghsklfh\nvfhkjlsh\nfkljashfklsj\nhafklsdj\nhjhruig\nhairueh\neirhj\nhruig\nha" />
+        app:layout_constraintTop_toBottomOf="@+id/outBitsResolutionView"
+        app:layout_constraintWidth_default="wrap"
+        tools:text="hsekjghsklfh\nvfhkjlsh\nfkljashfklsj\nhafklsdj\nhjhruhsekjghsklfh\nvfhkhsekjghsklfh\nvfhkjhsekjghsklfh\nvfhkjlsh\nfkljashfklsj\nhafklsdj\nhlsh\nfkljashfklsj\nhafklsdj\nhjlsh\nfkljashfklsj\nhafklsdj\nhig\nhairueh\neirhagkjghsklfh\nvfhkjlsh\nfkljashfklsj\nhafklsdj\nhjhruig\nhairueh\neirhj\nhruig\nha" />
 
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/loopbackButton"

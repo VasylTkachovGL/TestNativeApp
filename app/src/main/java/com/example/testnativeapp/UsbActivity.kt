@@ -14,13 +14,17 @@ import android.view.View
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.testnativeapp.descriptors.Usb10ASFormatI
 import com.example.testnativeapp.descriptors.UsbDescriptorParser
+import com.example.testnativeapp.descriptors.UsbEndpointDescriptor
+import com.example.testnativeapp.descriptors.UsbEndpointDescriptor.*
 import com.example.testnativeapp.descriptors.report.TextReportCanvas
 import kotlinx.android.synthetic.main.activity_usb.*
 import kotlinx.coroutines.*
 import java.io.File
 import java.lang.StringBuilder
 import java.util.*
+import kotlin.experimental.and
 
 /*
  * @author Tkachov Vasyl
@@ -53,14 +57,13 @@ class UsbActivity : Activity() {
 
         loopbackButton.setOnClickListener {
             usbDeviceConnection?.let { connection ->
-                val inFrequency = inFreqEditView.getIntValue()
-                val inBytesPerSample = inBytesPerSampleEditView.getIntValue()
-                val inChannels = inChannelsEditView.getIntValue()
-                val outFrequency = outFreqEditView.getIntValue()
-                val outBytesPerSample = outBytesPerSampleEditView.getIntValue()
-                val outChannels = outChannelsEditView.getIntValue()
-                App.core?.startLoopback(connection.fileDescriptor, inFrequency, inBytesPerSample,
-                    inChannels, outFrequency, outBytesPerSample, outChannels)
+                val frequency = freqEditView.getIntValue()
+                val inBytesPerSample = inBitsResolutionView.text.toString().toInt() / 8
+                val inChannels = inChannelsView.text.toString().toInt()
+                val outBytesPerSample = outBitsResolutionView.text.toString().toInt() / 8
+                val outChannels = outChannelsView.text.toString().toInt()
+                App.core?.startLoopback(connection.fileDescriptor, frequency, inBytesPerSample,
+                    inChannels, outBytesPerSample, outChannels)
             }
         }
 
@@ -188,16 +191,7 @@ class UsbActivity : Activity() {
                 return
             }
 
-            val parser = UsbDescriptorParser()
-            parser.parseDescriptors(connection.rawDescriptors)
-            val stringBuilder = StringBuilder()
-            val reportCanvas = TextReportCanvas(connection, stringBuilder)
-            for (descriptor in parser.descriptors) {
-                descriptor.report(reportCanvas)
-            }
-            Log.d(TAG, "$stringBuilder")
-            descriptorsView.text = stringBuilder.toString()
-            descriptorsView.movementMethod = ScrollingMovementMethod()
+            parseDescriptors(connection)
         }
     }
 
@@ -216,7 +210,8 @@ class UsbActivity : Activity() {
                 if (permissionGranted) {
                     device?.let { openUsbDevice(it) }
                 } else {
-                    Toast.makeText(context, "Permission denied: ${device?.manufacturerName}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "Permission denied: ${device?.manufacturerName}",
+                        Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -227,6 +222,37 @@ class UsbActivity : Activity() {
     private fun closeConnection() {
         usbDeviceConnection?.releaseInterface(usbDataInterface)
         usbDeviceConnection?.close()
+    }
+
+    private fun parseDescriptors(connection: UsbDeviceConnection) {
+        val parser = UsbDescriptorParser()
+        parser.parseDescriptors(connection.rawDescriptors)
+        val stringBuilder = StringBuilder()
+        val reportCanvas = TextReportCanvas(connection, stringBuilder)
+        for (i in 0 until parser.descriptors.size) {
+            val descriptor = parser.descriptors[i]
+            descriptor.report(reportCanvas)
+            if (descriptor is Usb10ASFormatI) {
+                val nextDescriptor = parser.descriptors[i + 1]
+                if (nextDescriptor is UsbEndpointDescriptor) {
+                    if (nextDescriptor.attributes and MASK_ATTRIBS_TRANSTYPE == TRANSTYPE_ISO) {
+                        when (nextDescriptor.endpointAddress and MASK_ENDPOINT_DIRECTION) {
+                            DIRECTION_INPUT -> {
+                                inBitsResolutionView.text = descriptor.bitResolution.toString()
+                                inChannelsView.text = descriptor.numChannels.toString()
+                            }
+                            DIRECTION_OUTPUT -> {
+                                freqView.hint = descriptor.sampleRates[0].toString()
+                                outBitsResolutionView.text = descriptor.bitResolution.toString()
+                                outChannelsView.text = descriptor.numChannels.toString()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        descriptorsView.text = stringBuilder.toString()
+        descriptorsView.movementMethod = ScrollingMovementMethod()
     }
 
     private fun startAudioWave() {

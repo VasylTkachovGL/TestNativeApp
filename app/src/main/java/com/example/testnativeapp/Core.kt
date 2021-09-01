@@ -6,7 +6,7 @@ package com.example.testnativeapp
 */
 class Core {
 
-    external fun startLoopback(fileDescriptor: Int, inFrequency: Int, inBytesPerSample: Int, inChannels: Int, outFrequency: Int, outBytesPerSample: Int, outChannels: Int)
+    external fun startLoopback(fileDescriptor: Int, frequency: Int, inBytesPerSample: Int, inChannels: Int, outBytesPerSample: Int, outChannels: Int)
 
     external fun playFile(fileDescriptor: Int, filePath: String)
 

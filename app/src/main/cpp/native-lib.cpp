@@ -12,16 +12,16 @@ static const uint16_t RATE = 44100;
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_testnativeapp_Core_startLoopback(JNIEnv *env, jobject thiz, jint fd, jint inFrequency, jint inBytesPerSample, jint inChannels, jint outFrequency, jint outBytesPerSample, jint outChannels) {
+Java_com_example_testnativeapp_Core_startLoopback(JNIEnv *env, jobject thiz, jint fd, jint frequency, jint inBytesPerSample, jint inChannels, jint outBytesPerSample, jint outChannels) {
     LOG_D(TAG, "Init. File descriptor: %d", fd);
     UacDevice device(fd);
     device.prepareAudioOutput();
     device.prepareAudioInput();
-    device.setChannelSampleRate(UacDevice::Output, outFrequency);
-    device.setChannelSampleRate(UacDevice::Input, inFrequency);
+    device.setChannelSampleRate(UacDevice::Output, frequency);
+    device.setChannelSampleRate(UacDevice::Input, frequency);
 
-    uint16_t inPacketSize = (inFrequency / 1000) * inBytesPerSample * inChannels;
-    uint16_t outPacketSize = (outFrequency / 1000) * outBytesPerSample * outChannels;
+    uint16_t inPacketSize = (frequency / 1000) * inBytesPerSample * inChannels;
+    uint16_t outPacketSize = (frequency / 1000) * outBytesPerSample * outChannels;
     LOG_D(TAG, "Loopback with packet sizes: input=%d, output=%d", inPacketSize, outPacketSize);
 
     device.loopback(inPacketSize, outPacketSize, inChannels);
