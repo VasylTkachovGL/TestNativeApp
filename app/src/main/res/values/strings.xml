@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">Tone Native</string>
+    <string name="usb_devices_connected">Usb devices connected</string>
+    <string name="no_devices_found">No devices found</string>
+    <string name="input_bits_resolution">Input bits per sample</string>
+    <string name="input_channels">Input channels</string>
+    <string name="output_bits_resolution">Output bits per sample</string>
+    <string name="output_channels">Output channels</string>
+    <string name="start_loopback">Start loopback</string>
+    <string name="play_file">Play file</string>
+    <string name="search_usb">Search USB</string>
 </resources>
