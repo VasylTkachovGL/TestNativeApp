@@ -22,7 +22,6 @@ import com.example.testnativeapp.descriptors.UsbEndpointDescriptor
 import com.example.testnativeapp.descriptors.UsbEndpointDescriptor.*
 import com.example.testnativeapp.descriptors.report.TextReportCanvas
 import kotlinx.android.synthetic.main.activity_usb.*
-import kotlinx.coroutines.*
 import java.io.File
 import java.lang.StringBuilder
 import java.util.*
@@ -35,7 +34,6 @@ import kotlin.experimental.and
 class UsbActivity : Activity() {
 
     private val tmpFilePath by lazy { "$externalCacheDir${File.separator}data.pcm" }
-    private val logFilePath by lazy { "$externalCacheDir${File.separator}tone-native-log.txt" }
     private val usbManager: UsbManager by lazy {
         getSystemService(Context.USB_SERVICE) as UsbManager
     }
@@ -46,10 +44,8 @@ class UsbActivity : Activity() {
     private var writeEndPoint: UsbEndpoint? = null
     private var usbPermissionReceiver: BroadcastReceiver? = null
     private var deviceStatusReceiver: BroadcastReceiver? = null
-    private var isRecording = false
 
     private var adapter: UsbDeviceAdapter? = null
-    private val audioWaveScope = CoroutineScope(Dispatchers.Main)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -273,23 +269,6 @@ class UsbActivity : Activity() {
             setAdapter(adapter)
             gravity = Gravity.BOTTOM
             dropDownVerticalOffset = 96
-        }
-    }
-
-    private fun startAudioWave() {
-        audioWaveScope.launch { updateAudioWave() }
-    }
-
-    private fun stopAudioWave() {
-        audioWaveScope.cancel()
-        audioRecordView.recreate()
-    }
-
-    private suspend fun updateAudioWave() {
-        while (isRecording) {
-            delay(100)
-            val currentMaxAmplitude = 0
-            audioRecordView.update(currentMaxAmplitude)
         }
     }
 
