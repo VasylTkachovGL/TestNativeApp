@@ -10,7 +10,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        app:constraint_referenced_ids="freqView, descriptorsView, loopbackButton,
+        app:constraint_referenced_ids="descriptorsView, loopbackButton,
+        freqView, freqTitleView, freqSpinnerView,
         inChannelsTitleView, inChannelsView,
         inBitsResolutionTitleView, inBitsResolutionView,
         outChannelsTitleView, outChannelsView,
@@ -66,32 +67,53 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/freqView"
-        android:layout_width="match_parent"
+    <TextView
+        android:id="@+id/freqTitleView"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="16dp"
-        android:hint="0"
-        android:textSize="16sp"
+        android:text="@string/frequency"
+        android:textColor="@color/helperText"
+        android:textSize="14sp"
         android:textStyle="bold"
-        app:helperText="Frequency"
-        app:helperTextTextColor="@color/helperText"
         app:layout_constraintBottom_toTopOf="@+id/inBitsResolutionTitleView"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0"
-        app:layout_constraintVertical_chainStyle="spread">
+        app:layout_constraintVertical_chainStyle="spread" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/freqEditView"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+    <TextView
+        android:id="@+id/freqView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="16dp"
+        android:textSize="14sp"
+        app:layout_constraintBottom_toTopOf="@+id/inBitsResolutionTitleView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/freqTitleView"
+        tools:text="Value" />
 
-    </com.google.android.material.textfield.TextInputLayout>
+    <Spinner
+        android:id="@+id/freqSpinnerView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        android:backgroundTint="@color/colorAccent"
+        android:spinnerMode="dropdown"
+        app:layout_constraintBottom_toBottomOf="@+id/freqView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0"
+        app:layout_constraintStart_toEndOf="@+id/freqTitleView"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
         android:id="@+id/inBitsResolutionTitleView"

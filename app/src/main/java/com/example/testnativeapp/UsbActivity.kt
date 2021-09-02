@@ -10,7 +10,9 @@ import android.hardware.usb.*
 import android.os.Bundle
 import android.text.method.ScrollingMovementMethod
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.widget.AdapterView
 import android.widget.Toast
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -57,7 +59,7 @@ class UsbActivity : Activity() {
 
         loopbackButton.setOnClickListener {
             usbDeviceConnection?.let { connection ->
-                val frequency = freqEditView.getIntValue()
+                val frequency = freqView.text.toString().toInt()
                 val inBytesPerSample = inBitsResolutionView.text.toString().toInt() / 8
                 val inChannels = inChannelsView.text.toString().toInt()
                 val outBytesPerSample = outBitsResolutionView.text.toString().toInt() / 8
@@ -75,6 +77,16 @@ class UsbActivity : Activity() {
 
         searchButton.setOnClickListener {
             refreshDeviceList()
+        }
+
+        freqSpinnerView.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View, pos: Int, id: Long) {
+                val selectedItem: Int = freqSpinnerView.selectedItem as Int
+                freqView.text = selectedItem.toString()
+            }
+
+            override fun onNothingSelected(arg: AdapterView<*>?) {
+            }
         }
 
         deviceStatusReceiver = object : BroadcastReceiver() {
@@ -242,7 +254,7 @@ class UsbActivity : Activity() {
                                 inChannelsView.text = descriptor.numChannels.toString()
                             }
                             DIRECTION_OUTPUT -> {
-                                freqView.hint = descriptor.sampleRates[0].toString()
+                                initFrequencySelector(descriptor.sampleRates)
                                 outBitsResolutionView.text = descriptor.bitResolution.toString()
                                 outChannelsView.text = descriptor.numChannels.toString()
                             }
@@ -253,6 +265,15 @@ class UsbActivity : Activity() {
         }
         descriptorsView.text = stringBuilder.toString()
         descriptorsView.movementMethod = ScrollingMovementMethod()
+    }
+
+    private fun initFrequencySelector(sampleRates: IntArray) {
+        val adapter = CustomSpinnerAdapter(this, sampleRates.asList())
+        freqSpinnerView.apply {
+            setAdapter(adapter)
+            gravity = Gravity.BOTTOM
+            dropDownVerticalOffset = 96
+        }
     }
 
     private fun startAudioWave() {
