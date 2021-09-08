@@ -22,7 +22,7 @@ Java_com_example_testnativeapp_Core_startLoopback(JNIEnv *env, jobject thiz, jin
 
     uint16_t inPacketSize = (frequency / 1000) * inBytesPerSample * inChannels;
     uint16_t outPacketSize = (frequency / 1000) * outBytesPerSample * outChannels;
-    LOG_D(TAG, "Loopback with packet sizes: input=%d, output=%d", inPacketSize, outPacketSize);
+    LOG_D(TAG, "Loopback freq=%d inChannels=%d outChannels=%d inBytes=%d outBytes=%d", frequency, inChannels, outChannels, inBytesPerSample, outBytesPerSample);
 
     device.loopback(inPacketSize, outPacketSize, inChannels);
     while(true)

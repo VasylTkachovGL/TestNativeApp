@@ -233,25 +233,6 @@
         app:layout_constraintTop_toBottomOf="@+id/outChannelsTitleView"
         tools:text="Value" />
 
-    <com.visualizer.amplitude.AudioRecordView
-        android:id="@+id/audioRecordView"
-        android:layout_width="256dp"
-        android:layout_height="128dp"
-        app:chunkAlignTo="bottom"
-        app:chunkColor="@color/colorPrimary"
-        app:chunkMaxHeight="128dp"
-        app:chunkMinHeight="8dp"
-        app:chunkRoundedCorners="true"
-        app:chunkSoftTransition="true"
-        app:chunkSpace="2dp"
-        app:chunkWidth="4dp"
-        app:direction="leftToRight"
-        app:layout_constraintBottom_toTopOf="@id/loopbackButton"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/outBitsResolutionView"
-        app:layout_constraintVertical_bias="0.5" />
-
     <TextView
         android:id="@+id/descriptorsView"
         android:layout_width="match_parent"
