@@ -195,9 +195,6 @@ class UsbActivity : Activity() {
                 }
                 usbDataInterface = usbInterface
             }
-            if (writeEndPoint == null || readEndPoint == null) {
-                return
-            }
 
             parseDescriptors(connection)
         }
