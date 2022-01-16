@@ -22,6 +22,10 @@ import com.example.testnativeapp.descriptors.UsbEndpointDescriptor
 import com.example.testnativeapp.descriptors.UsbEndpointDescriptor.*
 import com.example.testnativeapp.descriptors.report.TextReportCanvas
 import kotlinx.android.synthetic.main.activity_usb.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import java.io.File
 import java.lang.StringBuilder
 import java.util.*
@@ -44,6 +48,7 @@ class UsbActivity : Activity() {
     private var writeEndPoint: UsbEndpoint? = null
     private var usbPermissionReceiver: BroadcastReceiver? = null
     private var deviceStatusReceiver: BroadcastReceiver? = null
+    private val audioScope = CoroutineScope(Dispatchers.IO)
 
     private var adapter: UsbDeviceAdapter? = null
 
@@ -60,14 +65,21 @@ class UsbActivity : Activity() {
                 val inChannels = inChannelsView.text.toString().toInt()
                 val outBytesPerSample = outBitsResolutionView.text.toString().toInt() / 8
                 val outChannels = outChannelsView.text.toString().toInt()
-                App.core?.startLoopback(connection.fileDescriptor, frequency, inBytesPerSample,
-                    inChannels, outBytesPerSample, outChannels)
+                audioScope.launch {
+                    App.core?.startLoopback(
+                        connection.fileDescriptor, frequency, inBytesPerSample,
+                        inChannels, outBytesPerSample, outChannels
+                    )
+                }
             }
         }
 
-        playButton.setOnClickListener {
+        recordButton.setOnClickListener {
             usbDeviceConnection?.let { connection ->
-                App.core?.playFile(connection.fileDescriptor, tmpFilePath)
+                audioScope.launch {
+                    App.core?.recordFile(connection.fileDescriptor, tmpFilePath)
+                    //App.core?.playFile(connection.fileDescriptor, tmpFilePath)
+                }
             }
         }
 
@@ -109,6 +121,7 @@ class UsbActivity : Activity() {
         usbPermissionReceiver?.let { unregisterReceiver(usbPermissionReceiver) }
         deviceStatusReceiver?.let { unregisterReceiver(deviceStatusReceiver) }
         closeConnection()
+        audioScope.cancel()
     }
 
     private fun parseDeviceIntent(intent: Intent?) {

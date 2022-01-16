@@ -8,6 +8,7 @@
     <string name="output_channels">Output channels</string>
     <string name="start_loopback">Start loopback</string>
     <string name="play_file">Play file</string>
+    <string name="record">Record</string>
     <string name="search_usb">Search USB</string>
     <string name="frequency">Frequency</string>
 </resources>

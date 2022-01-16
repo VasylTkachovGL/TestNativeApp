@@ -8,7 +8,7 @@
 
 #define TAG "UsbDevice"
 static const size_t NUM_TRANSFERS = 10;
-static const uint8_t NUM_PACKETS = 1;
+static const uint8_t NUM_PACKETS = 2;
 
 UsbDevice::UsbDevice(jint fd) {
     // Init the library
@@ -224,6 +224,7 @@ void UsbDevice::transferEventLoop()
 void UsbDevice::receiveIsoData(uint8_t ep, unsigned char *data, size_t size, uint16_t packetSize) {
     size_t totalPackets = size / packetSize;
     size_t bytesToGo = size;
+    LOG_D(TAG, "receiveIsoData packet size: %d", packetSize);
 
     while (bytesToGo > 0) {
         // Schedule as many packet transfers as possible
@@ -241,13 +242,13 @@ void UsbDevice::receiveIsoData(uint8_t ep, unsigned char *data, size_t size, uin
             bytesToGo -= chunkSize;
         }
 
-        int ret = libusb_handle_events(nullptr);
+        int ret = libusb_handle_events(NULL);
         check(ret, "libusb_handle_events()");
     }
 
     // Wait for remaining packets to be sent
     while (availableXfers.size() != NUM_TRANSFERS) {
-        int ret = libusb_handle_events(nullptr);
+        int ret = libusb_handle_events(NULL);
         check(ret, "libusb_handle_events()");
     }
 }
@@ -266,27 +267,26 @@ void UsbDevice::loopback(uint8_t inEp, uint16_t inPacketSize, int8_t inChannels,
 
 void UsbDevice::loopbackEventLoop()
 {
-    while(true)
-    {
-        // Schedule as many packet transfers as possible
-        while(availableXfers.size() > 0)
-        {
-            size_t chunkSize = inPacketSize * NUM_PACKETS;
+        while (true) {
+            // Schedule as many packet transfers as possible
+            while (availableXfers.size() > 0) {
+                size_t chunkSize = inPacketSize * NUM_PACKETS;
 
-            libusb_transfer * xfer = availableXfers.back();
-            availableXfers.pop_back();
+                libusb_transfer *xfer = availableXfers.back();
+                availableXfers.pop_back();
 
-            uint8_t * buf = buffers.back();
-            buffers.pop_back();
+                uint8_t *buf = buffers.back();
+                buffers.pop_back();
 
-            libusb_fill_iso_transfer(xfer, hdev, inEp, buf, chunkSize, NUM_PACKETS, loopbackPacketReceiveCB, this, 1000);
-            libusb_set_iso_packet_lengths(xfer, inPacketSize);
-            libusb_submit_transfer(xfer);
+                libusb_fill_iso_transfer(xfer, hdev, inEp, buf, chunkSize, NUM_PACKETS,
+                                         loopbackPacketReceiveCB, this, 1000);
+                libusb_set_iso_packet_lengths(xfer, inPacketSize);
+                libusb_submit_transfer(xfer);
+            }
+
+            int ret = libusb_handle_events(NULL);
+            check(ret, "libusb_handle_events()");
         }
-
-        int ret = libusb_handle_events(NULL);
-        check(ret, "libusb_handle_events()");
-    }
 }
 
 void UsbDevice::loopbackPacketReceiveCB(libusb_transfer * xfer)

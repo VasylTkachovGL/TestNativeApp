@@ -29,10 +29,10 @@ android {
     externalNativeBuild {
         cmake {
             path "src/main/cpp/CMakeLists.txt"
-            version "3.10.2"
+            version "3.18.1"
         }
     }
-    ndkVersion '22.1.7171670'
+    ndkVersion '23.1.7779620'
 
     applicationVariants.all { variant ->
         variant.outputs.all { output ->
